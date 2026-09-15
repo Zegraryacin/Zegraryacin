@@ -1,0 +1,378 @@
+.pop-pack-demenag {
+  display: flex;
+  flex-direction: column;
+
+  padding: 16px 24px;
+
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+
+/* =========================================
+   ZONE SCROLLABLE
+   ========================================= */
+
+.popup-content {
+  flex: 1;
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scrollbar-gutter: stable;
+}
+
+
+/* =========================================
+   TABLEAU PACK
+   ========================================= */
+
+.pack-table {
+  width: 100%;
+  margin-top: 12px;
+}
+
+
+/* Les 3 colonnes utilisent exactement
+   la même structure dans header/lignes/total */
+
+.header-row,
+.ligne-risque,
+.total-row {
+  display: flex;
+  align-items: stretch;
+
+  width: 100%;
+  gap: 10px;
+}
+
+
+/* =========================================
+   COLONNE ADRESSE
+   ========================================= */
+
+.col-adresse {
+  flex: 1 1 52%;
+  min-width: 0;
+}
+
+
+/* =========================================
+   COLONNES FORMULES
+   ========================================= */
+
+.col-select {
+  flex: 0 0 22%;
+  min-width: 0;
+}
+
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.header-row {
+  align-items: flex-end;
+  margin-bottom: 6px;
+}
+
+.header {
+  width: 100%;
+  box-sizing: border-box;
+
+  min-height: 56px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 8px 10px;
+
+  color: #fff;
+  text-align: center;
+
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+
+  text-transform: uppercase;
+
+  border-radius: 4px;
+}
+
+.bleu-pack {
+  background: #0054a6;
+}
+
+.orange-pack {
+  background: #e55b00;
+}
+
+.header-full {
+  width: 100%;
+}
+
+
+/* =========================================
+   UNE LIGNE DE RISQUE
+   ========================================= */
+
+.ligne-risque {
+  align-items: center;
+
+  /* IMPORTANT :
+     on réduit fortement l'espace vertical */
+  margin-top: 0;
+
+  padding: 7px 0;
+
+  border-bottom: 1px solid #eeeeee;
+}
+
+
+/* =========================================
+   CODE POSTAL
+   ========================================= */
+
+.adresse {
+  color: #0054a6;
+
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 16px;
+
+  margin: 0 0 2px 0;
+}
+
+
+/* =========================================
+   DESCRIPTION SOUS LE CODE POSTAL
+   ========================================= */
+
+.detail {
+  margin: 0;
+
+  color: #1a0b00;
+
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+
+  overflow-wrap: break-word;
+}
+
+
+/* =========================================
+   CONTAINER SELECT
+   ========================================= */
+
+.pack-select-container {
+  position: relative;
+
+  width: 100%;
+  padding: 0;
+}
+
+
+/* =========================================
+   SELECT
+   ========================================= */
+
+.pack-select {
+  width: 100%;
+  height: 40px;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 8px;
+
+  background: #fff;
+
+  border: 1px solid #d1d1d1;
+  border-radius: 5px;
+
+  cursor: pointer;
+}
+
+
+/* =========================================
+   PAS DE PACK
+   ========================================= */
+
+.pas-pack-select {
+  padding-left: 8px;
+}
+
+
+/* =========================================
+   ICONE
+   ========================================= */
+
+.pack-select-icon {
+  width: 16.667px;
+  height: 16.667px;
+
+  flex: 0 0 16.667px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pack-select-icon img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.pack-select-icon-avion {
+  width: 16.667px;
+  height: 30.667px;
+}
+
+.pack-select-icon-empty {
+  visibility: hidden;
+}
+
+
+/* =========================================
+   TEXTE DU SELECT
+   ========================================= */
+
+.pack-select-lib {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 0 6px;
+
+  color: var(--Color-Black, #1a0b00);
+
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 16px;
+
+  text-align: left;
+}
+
+
+/* =========================================
+   FLECHE
+   ========================================= */
+
+.pack-select-arrow {
+  width: 24px;
+  min-width: 24px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pack-select-arrow img {
+  width: 24px;
+  height: 24px;
+}
+
+
+/* =========================================
+   SELECT DISABLED
+   ========================================= */
+
+.pack-select-disabled {
+  background-color: #d1d1d1;
+  color: white;
+
+  border: 0 solid white;
+
+  cursor: not-allowed;
+}
+
+.pack-select-disabled .pack-select-lib {
+  color: #ffffff;
+}
+
+.pack-select-disabled .pack-select-arrow {
+  opacity: 0.4;
+}
+
+
+/* =========================================
+   DROPDOWN
+   ========================================= */
+
+.pack-dropdown {
+  position: absolute;
+
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+
+  background: white;
+
+  border: 1px solid #d1d1d1;
+  border-radius: 6px;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  z-index: 1000;
+
+  overflow: hidden;
+}
+
+.pack-option {
+  padding: 10px 12px;
+
+  font-size: 12px;
+
+  cursor: pointer;
+
+  background: white;
+}
+
+.pack-option:hover {
+  background: #f2f6fc;
+}
+
+.selected-option {
+  background: #0054a6;
+  color: white;
+  font-weight: 600;
+}
+
+
+/* =========================================
+   TOTAL
+   ========================================= */
+
+.total-row {
+  align-items: center;
+
+  margin-top: 8px;
+  padding: 10px 0;
+}
+
+.total-label {
+  color: #0054a6;
+
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+}
+
+.total-value {
+  color: #0054a6;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  text-align: center;
+}
