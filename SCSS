@@ -1,378 +1,599 @@
+/* =========================================================
+   PACK DEMENAGEMENT
+   ========================================================= */
+
 .pop-pack-demenag {
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
 
-  padding: 16px 24px;
+    padding: 16px 24px;
 
-  max-height: 80vh;
-  overflow: hidden;
+    max-height: 80vh;
+    overflow: hidden;
 }
 
 
-/* =========================================
-   ZONE SCROLLABLE
-   ========================================= */
+/* =========================================================
+   TITRE
+   ========================================================= */
+
+.pop-title-bloc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+
+    padding-bottom: 6px;
+
+    border-bottom: 1px solid #CBCBCB;
+
+    box-sizing: border-box;
+    flex: 0 0 auto;
+}
+
+.pop-title {
+    margin: 0;
+
+    color: #0A4DA4;
+
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 22px;
+}
+
+
+/* =========================================================
+   CONTENU SCROLLABLE
+   ========================================================= */
 
 .popup-content {
-  flex: 1;
-  min-height: 0;
+    flex: 1;
+    min-height: 0;
 
-  overflow-y: auto;
-  overflow-x: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 
-  scrollbar-gutter: stable;
+    scrollbar-gutter: stable;
 }
 
 
-/* =========================================
-   TABLEAU PACK
-   ========================================= */
+/* =========================================================
+   TABLEAU
+   ========================================================= */
 
+/*
+ * Très peu d'espace entre la ligne sous
+ * "Pack déménagement" et les entêtes.
+ */
 .pack-table {
-  width: 100%;
-  margin-top: 12px;
+    width: 100%;
+    margin-top: 5px;
 }
 
 
-/* Les 3 colonnes utilisent exactement
-   la même structure dans header/lignes/total */
+/* =========================================================
+   STRUCTURE COMMUNE
+   ========================================================= */
+
+/*
+ * IMPORTANT :
+ *
+ * header-row et ligne-risque utilisent EXACTEMENT
+ * les mêmes proportions.
+ *
+ * C'est ce qui empêche "FORMULES CONSEILLÉES"
+ * de rentrer dans l'espace réservé aux risques.
+ */
 
 .header-row,
-.ligne-risque,
-.total-row {
-  display: flex;
-  align-items: stretch;
+.ligne-risque {
+    display: flex;
+    align-items: center;
 
-  width: 100%;
-  gap: 10px;
+    width: 100%;
+
+    gap: 12px;
+
+    box-sizing: border-box;
 }
 
 
-/* =========================================
-   COLONNE ADRESSE
-   ========================================= */
+/* =========================================================
+   COLONNES
+   ========================================================= */
+
+/*
+ * Adresse plus large.
+ *
+ * 1.7 / 1 / 1
+ *
+ * Cela donne environ :
+ * adresse = 46 %
+ * conseillée = 27 %
+ * personnalisée = 27 %
+ */
 
 .col-adresse {
-  flex: 1 1 52%;
-  min-width: 0;
+    flex: 1.7 1 0;
+
+    min-width: 0;
+
+    box-sizing: border-box;
 }
-
-
-/* =========================================
-   COLONNES FORMULES
-   ========================================= */
 
 .col-select {
-  flex: 0 0 22%;
-  min-width: 0;
+    flex: 1 1 0;
+
+    min-width: 0;
+
+    box-sizing: border-box;
 }
 
 
-/* =========================================
-   HEADER
-   ========================================= */
+/* =========================================================
+   ENTETES FORMULES
+   ========================================================= */
 
 .header-row {
-  align-items: flex-end;
-  margin-bottom: 6px;
+    margin: 0;
+    padding: 0;
+
+    align-items: flex-end;
 }
+
+
+/*
+ * Pas de margin-bottom ici.
+ * Le premier select doit être proche de l'entête.
+ */
 
 .header {
-  width: 100%;
-  box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  min-height: 56px;
+    width: 100%;
+    min-height: 44px;
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    padding: 6px 8px;
 
-  padding: 8px 10px;
+    box-sizing: border-box;
 
-  color: #fff;
-  text-align: center;
+    color: #FFF;
 
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: 16px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 15px;
 
-  text-transform: uppercase;
+    text-align: center;
+    text-transform: uppercase;
 
-  border-radius: 4px;
+    border-radius: 4px 4px 0 0;
 }
 
-.bleu-pack {
-  background: #0054a6;
-}
 
-.orange-pack {
-  background: #e55b00;
-}
+/*
+ * Ton ancien 114px doit disparaître.
+ */
 
 .header-full {
-  width: 100%;
+    width: 100%;
 }
 
 
-/* =========================================
-   UNE LIGNE DE RISQUE
-   ========================================= */
+.bleu-pack {
+    background: #0054A6;
+}
+
+
+.orange-pack {
+    background: #E55B00;
+}
+
+
+/* =========================================================
+   LIGNES DE RISQUES
+   ========================================================= */
+
+/*
+ * IMPORTANT :
+ *
+ * SUPPRIMER l'ancien :
+ *
+ * margin-top: 24px;
+ *
+ * Il était responsable d'une grande partie
+ * des espaces entourés en jaune.
+ */
 
 .ligne-risque {
-  align-items: center;
+    margin: 0;
 
-  /* IMPORTANT :
-     on réduit fortement l'espace vertical */
-  margin-top: 0;
+    padding: 3px 0;
 
-  padding: 7px 0;
+    min-height: 50px;
 
-  border-bottom: 1px solid #eeeeee;
+    box-sizing: border-box;
 }
 
 
-/* =========================================
+/* =========================================================
    CODE POSTAL
-   ========================================= */
+   ========================================================= */
 
 .adresse {
-  color: #0054a6;
+    margin: 0;
+    padding: 0;
 
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 16px;
+    color: #0054A6;
 
-  margin: 0 0 2px 0;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+
+    line-height: 15px;
 }
 
 
-/* =========================================
-   DESCRIPTION SOUS LE CODE POSTAL
-   ========================================= */
+/* =========================================================
+   DESCRIPTION DU RISQUE
+   ========================================================= */
 
 .detail {
-  margin: 0;
+    margin: 2px 0 0 0;
+    padding: 0;
 
-  color: #1a0b00;
+    color: #1A0B00;
 
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 16px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
 
-  overflow-wrap: break-word;
+    line-height: 16px;
+
+    /*
+     * Comme sur le visuel :
+     * une seule ligne.
+     */
+    white-space: nowrap;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 
-/* =========================================
-   CONTAINER SELECT
-   ========================================= */
+/* =========================================================
+   CONTAINER DU SELECT
+   ========================================================= */
 
 .pack-select-container {
-  position: relative;
+    position: relative;
 
-  width: 100%;
-  padding: 0;
+    width: 100%;
+    min-width: 0;
+
+    padding: 0;
+    margin: 0;
+
+    box-sizing: border-box;
 }
 
 
-/* =========================================
+/* =========================================================
    SELECT
-   ========================================= */
+   ========================================================= */
 
 .pack-select {
-  width: 100%;
-  height: 40px;
+    display: flex;
+    align-items: center;
 
-  box-sizing: border-box;
+    width: 100%;
+    height: 40px;
 
-  display: flex;
-  align-items: center;
+    margin: 0;
+    padding: 0 8px;
 
-  padding: 0 8px;
+    box-sizing: border-box;
 
-  background: #fff;
+    background: #FFF;
 
-  border: 1px solid #d1d1d1;
-  border-radius: 5px;
+    border: 1px solid #D1D1D1;
+    border-radius: 4px;
 
-  cursor: pointer;
+    cursor: pointer;
 }
 
-
-/* =========================================
-   PAS DE PACK
-   ========================================= */
 
 .pas-pack-select {
-  padding-left: 8px;
+    padding-left: 8px;
 }
 
 
-/* =========================================
+/* =========================================================
    ICONE
-   ========================================= */
+   ========================================================= */
 
 .pack-select-icon {
-  width: 16.667px;
-  height: 16.667px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  flex: 0 0 16.667px;
+    flex: 0 0 16.667px;
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    width: 16.667px;
+    height: 16.667px;
 }
+
 
 .pack-select-icon img {
-  max-width: 100%;
-  max-height: 100%;
+    display: block;
+
+    max-width: 100%;
+    max-height: 100%;
 }
+
 
 .pack-select-icon-avion {
-  width: 16.667px;
-  height: 30.667px;
+    width: 16.667px;
+    height: 30.667px;
 }
+
 
 .pack-select-icon-empty {
-  visibility: hidden;
+    visibility: hidden;
 }
 
 
-/* =========================================
-   TEXTE DU SELECT
-   ========================================= */
+/* =========================================================
+   TEXTE SELECT
+   ========================================================= */
 
 .pack-select-lib {
-  flex: 1;
+    flex: 1;
 
-  min-width: 0;
+    min-width: 0;
 
-  padding: 0 6px;
+    padding: 0 6px;
 
-  color: var(--Color-Black, #1a0b00);
+    color: var(--Color-Black, #1A0B00);
 
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 16px;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
 
-  text-align: left;
+    line-height: 16px;
+
+    text-align: left;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 
-/* =========================================
+/* =========================================================
    FLECHE
-   ========================================= */
+   ========================================================= */
 
 .pack-select-arrow {
-  width: 24px;
-  min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    flex: 0 0 24px;
+
+    width: 24px;
+    min-width: 24px;
 }
+
 
 .pack-select-arrow img {
-  width: 24px;
-  height: 24px;
+    display: block;
+
+    width: 24px;
+    height: 24px;
 }
 
 
-/* =========================================
-   SELECT DISABLED
-   ========================================= */
-
-.pack-select-disabled {
-  background-color: #d1d1d1;
-  color: white;
-
-  border: 0 solid white;
-
-  cursor: not-allowed;
-}
-
-.pack-select-disabled .pack-select-lib {
-  color: #ffffff;
-}
-
-.pack-select-disabled .pack-select-arrow {
-  opacity: 0.4;
-}
-
-
-/* =========================================
+/* =========================================================
    DROPDOWN
-   ========================================= */
+   ========================================================= */
+
+/*
+ * EXACTEMENT la même largeur que le bouton.
+ */
 
 .pack-dropdown {
-  position: absolute;
+    position: absolute;
 
-  top: calc(100% + 2px);
-  left: 0;
-  right: 0;
+    top: 100%;
+    left: 0;
+    right: 0;
 
-  background: white;
+    width: 100%;
+    min-width: 100%;
 
-  border: 1px solid #d1d1d1;
-  border-radius: 6px;
+    margin: 0;
 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
 
-  z-index: 1000;
+    background: #FFF;
 
-  overflow: hidden;
+    border: 1px solid #D1D1D1;
+    border-radius: 0 0 4px 4px;
+
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    overflow: hidden;
+
+    z-index: 1000;
 }
+
+
+/* =========================================================
+   OPTIONS DROPDOWN
+   ========================================================= */
 
 .pack-option {
-  padding: 10px 12px;
+    display: flex;
+    align-items: center;
 
-  font-size: 12px;
+    width: 100%;
+    min-height: 34px;
 
-  cursor: pointer;
+    margin: 0;
+    padding: 7px 12px;
 
-  background: white;
+    box-sizing: border-box;
+
+    background: #FFF;
+
+    color: #1A0B00;
+
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+
+    line-height: 16px;
+
+    /*
+     * Empêche une coupure CSS.
+     *
+     * ATTENTION :
+     * il faut aussi supprimer le <br>
+     * venant du libellé, voir plus bas.
+     */
+    white-space: nowrap !important;
+
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+
+    cursor: pointer;
 }
+
 
 .pack-option:hover {
-  background: #f2f6fc;
+    background: #F2F6FC;
 }
+
 
 .selected-option {
-  background: #0054a6;
-  color: white;
-  font-weight: 600;
+    background: #0054A6;
+
+    color: #FFF;
+
+    font-weight: 600;
 }
 
 
-/* =========================================
+/* =========================================================
+   SELECT DESACTIVE
+   ========================================================= */
+
+.pack-select-disabled {
+    background-color: #D1D1D1;
+
+    color: #FFF;
+
+    border: 0 solid #FFF;
+
+    cursor: not-allowed;
+}
+
+
+.pack-select-disabled .pack-select-lib {
+    color: #FFF;
+}
+
+
+.pack-select-disabled .pack-select-arrow {
+    opacity: 0.4;
+}
+
+
+/* =========================================================
    TOTAL
-   ========================================= */
+   ========================================================= */
 
 .total-row {
-  align-items: center;
+    display: flex;
+    align-items: center;
 
-  margin-top: 8px;
-  padding: 10px 0;
+    width: 100%;
+
+    gap: 12px;
+
+    margin-top: 8px;
+    padding: 6px 0;
+
+    box-sizing: border-box;
 }
+
+
+.total-row .col-adresse {
+    flex: 1.7 1 0;
+}
+
+
+.total-row .col-select {
+    flex: 1 1 0;
+}
+
 
 .total-label {
-  color: #0054a6;
+    color: #0054A6;
 
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: normal;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 700;
+
+    line-height: normal;
 }
 
+
 .total-value {
-  color: #0054a6;
+    color: #0054A6;
 
-  font-size: 14px;
-  font-weight: 700;
+    font-size: 14px;
+    font-weight: 700;
 
-  text-align: center;
+    text-align: center;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.pop-footer-bloc-detail {
+    display: flex;
+    flex-direction: row;
+
+    justify-content: space-between;
+    align-items: center;
+
+    width: 100%;
+}
+
+
+.right-buttons {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.liens-formule {
+    display: flex;
+    align-items: center;
+
+    gap: 16px;
+
+    margin-top: 8px;
 }
