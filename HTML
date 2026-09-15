@@ -1,187 +1,162 @@
-<div class="popup-content">
+Dans le HTML, remplace ton header-row par :
 
-  <div class="pack-table">
+<div
+  class="header-row"
+  [class.one-formula]="!hasFormuleAlternative">
 
-    <!-- EN-TÊTE -->
-    <div class="header-row">
+  <div class="col-adresse"></div>
 
-      <div class="col-adresse"></div>
-
-      <div class="col-select">
-        <div
-          class="header bleu-pack"
-          [class.header-full]="!hasFormuleAlternative">
-          FORMULES CONSEILLÉES
-        </div>
-      </div>
-
-      <div
-        class="col-select"
-        *ngIf="hasFormuleAlternative">
-        <div class="header orange-pack">
-          FORMULES PERSONNALISÉES
-        </div>
-      </div>
-
-    </div>
-
-
-    <!-- LIGNES RISQUES -->
+  <div class="col-select">
     <div
-      *ngFor="let risque of risques"
-      class="ligne-risque">
+      class="header bleu-pack"
+      [class.header-full]="!hasFormuleAlternative">
+      FORMULES CONSEILLÉES
+    </div>
+  </div>
 
-      <!-- CODE POSTAL + INFORMATIONS -->
-      <div class="col-adresse">
+  <div
+    class="col-select"
+    *ngIf="hasFormuleAlternative">
+    <div class="header orange-pack">
+      FORMULES PERSONNALISÉES
+    </div>
+  </div>
 
-        <div class="adresse">
-          {{ risque.adresse }}
-        </div>
+</div>
 
-        <div class="detail">
-          {{ service.getRisqueDetail(risque, true, true) }}
-        </div>
+Ensuite, sur ta boucle des risques, remplace le début par :
 
-      </div>
+<div
+  *ngFor="let risque of risques"
+  class="ligne-risque"
+  [class.one-formula]="!hasFormuleAlternative">
 
+  <div class="col-adresse">
 
-      <!-- FORMULE CONSEILLÉE -->
-      <div class="col-select">
-
-        <div class="pack-select-container">
-
-          <button
-            class="pack-select"
-            [class.pas-pack-select]="risque.packConseille === 'N'"
-            [class.pack-select-disabled]="!risque.modifiableConseille"
-            [disabled]="!risque.modifiableConseille"
-            (click)="toggleDropdownConseillee(risque); $event.stopPropagation()">
-
-            <div
-              class="pack-select-icon"
-              [class.pack-select-icon-avion]="isAvionSelected(risque.packConseille)"
-              [class.pack-select-icon-empty]="!getSelectedIcon(risque.packConseille)">
-
-              <img
-                alt=""
-                [src]="getSelectedIcon(risque.packConseille)" />
-
-            </div>
-
-            <div
-              class="pack-select-lib"
-              [innerHTML]="getSelectedOptionLabel(risque.packConseille)">
-            </div>
-
-            <div class="pack-select-arrow">
-              <img
-                alt=""
-                src="/assets/images/commun/select-arrow.png" />
-            </div>
-
-          </button>
-
-
-          <div
-            *ngIf="risque.isDropdownConseilleeOpen"
-            class="pack-dropdown">
-
-            <div
-              *ngFor="let option of optionsPack"
-              class="pack-option"
-              [class.selected-option]="isSelectedConseillee(risque, option.cle)"
-              (click)="selectOptionConseillee(risque, option.cle); $event.stopPropagation()"
-              [innerHTML]="getLibellePack(option.cle)">
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- FORMULE PERSONNALISÉE -->
-      <div
-        class="col-select"
-        *ngIf="hasFormuleAlternative">
-
-        <div class="pack-select-container">
-
-          <button
-            class="pack-select"
-            [class.pas-pack-select]="risque.packPersonnalise === 'N'"
-            [class.pack-select-disabled]="!risque.modifiablePersonnalise"
-            [disabled]="!risque.modifiablePersonnalise"
-            (click)="toggleDropdownPersonnalisee(risque); $event.stopPropagation()">
-
-            <div
-              class="pack-select-icon"
-              [class.pack-select-icon-avion]="isAvionSelected(risque.packPersonnalise)"
-              [class.pack-select-icon-empty]="!getSelectedIcon(risque.packPersonnalise)">
-
-              <img
-                alt=""
-                [src]="getSelectedIcon(risque.packPersonnalise)" />
-
-            </div>
-
-            <div
-              class="pack-select-lib"
-              [innerHTML]="getSelectedOptionLabel(risque.packPersonnalise)">
-            </div>
-
-            <div class="pack-select-arrow">
-              <img
-                alt=""
-                src="/assets/images/commun/select-arrow.png" />
-            </div>
-
-          </button>
-
-
-          <div
-            *ngIf="risque.isDropdownPersonnaliseeOpen"
-            class="pack-dropdown">
-
-            <div
-              *ngFor="let option of optionsPack"
-              class="pack-option"
-              [class.selected-option]="isSelectedPersonnalisee(risque, option.cle)"
-              (click)="selectOptionPersonnalisee(risque, option.cle); $event.stopPropagation()"
-              [innerHTML]="getLibellePack(option.cle)">
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
+    <div class="adresse">
+      {{ risque.adresse }}
     </div>
 
+    <div class="detail">
+      {{ service.getRisqueDetail(risque, true, true) }}
+    </div>
 
-    <!-- TOTAL -->
-    <div class="total-row">
+  </div>
 
-      <div class="col-adresse total-label">
-        TOTAL
-      </div>
+  <!-- FORMULE CONSEILLÉE -->
+  <div class="col-select">
 
-      <div class="col-select total-value">
-        {{ totalConseille }} €
-      </div>
+    <div class="pack-select-container">
+
+      <button
+        class="pack-select"
+        [class.pas-pack-select]="risque.packConseille === 'N'"
+        [class.pack-select-disabled]="!risque.modifiableConseille"
+        [disabled]="!risque.modifiableConseille"
+        (click)="toggleDropdownConseillee(risque); $event.stopPropagation()">
+
+        <div
+          class="pack-select-icon"
+          [class.pack-select-icon-avion]="isAvionSelected(risque.packConseille)"
+          [class.pack-select-icon-empty]="!getSelectedIcon(risque.packConseille)">
+
+          <img
+            alt=""
+            [src]="getSelectedIcon(risque.packConseille)" />
+
+        </div>
+
+        <div
+          class="pack-select-lib"
+          [innerHTML]="getSelectedOptionLabel(risque.packConseille)">
+        </div>
+
+        <div class="pack-select-arrow">
+          <img
+            alt=""
+            src="/assets/images/commun/select-arrow.png" />
+        </div>
+
+      </button>
 
       <div
-        class="col-select total-value"
-        *ngIf="hasFormuleAlternative">
-        {{ totalPerso }} €
+        *ngIf="risque.isDropdownConseilleeOpen"
+        class="pack-dropdown">
+
+        <div
+          *ngFor="let option of optionsPack"
+          class="pack-option"
+          [class.selected-option]="isSelectedConseillee(risque, option.cle)"
+          (click)="selectOptionConseillee(risque, option.cle); $event.stopPropagation()"
+          [innerHTML]="getLibellePack(option.cle)">
+        </div>
+
       </div>
 
     </div>
 
   </div>
 
-  <!-- Ton mat-accordion reste ici, sans changement -->
+  <!-- FORMULE PERSONNALISÉE -->
+  <div
+    class="col-select"
+    *ngIf="hasFormuleAlternative">
+
+    <div class="pack-select-container">
+
+      <button
+        class="pack-select"
+        [class.pas-pack-select]="risque.packPersonnalise === 'N'"
+        [class.pack-select-disabled]="!risque.modifiablePersonnalise"
+        [disabled]="!risque.modifiablePersonnalise"
+        (click)="toggleDropdownPersonnalisee(risque); $event.stopPropagation()">
+
+        <div
+          class="pack-select-icon"
+          [class.pack-select-icon-avion]="isAvionSelected(risque.packPersonnalise)"
+          [class.pack-select-icon-empty]="!getSelectedIcon(risque.packPersonnalise)">
+
+          <img
+            alt=""
+            [src]="getSelectedIcon(risque.packPersonnalise)" />
+
+        </div>
+
+        <div
+          class="pack-select-lib"
+          [innerHTML]="getSelectedOptionLabel(risque.packPersonnalise)">
+        </div>
+
+        <div class="pack-select-arrow">
+          <img
+            alt=""
+            src="/assets/images/commun/select-arrow.png" />
+        </div>
+
+      </button>
+
+      <div
+        *ngIf="risque.isDropdownPersonnaliseeOpen"
+        class="pack-dropdown">
+
+        <div
+          *ngFor="let option of optionsPack"
+          class="pack-option"
+          [class.selected-option]="isSelectedPersonnalisee(risque, option.cle)"
+          (click)="selectOptionPersonnalisee(risque, option.cle); $event.stopPropagation()"
+          [innerHTML]="getLibellePack(option.cle)">
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
 
 </div>
+
+Si tu as aussi un total-row, mets simplement :
+
+<div
+  class="total-row"
+  [class.one-formula]="!hasFormuleAlternative">
