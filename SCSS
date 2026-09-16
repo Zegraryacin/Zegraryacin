@@ -1,3 +1,12 @@
+.total-row {
+    margin-top: 30px;
+    align-items: center;
+}
+
+/* =========================================================
+   MÊME GRILLE POUR LES RISQUES + PACKS + TOTAL
+   ========================================================= */
+
 .pack-row,
 .total-row {
     display: grid;
@@ -6,30 +15,53 @@
     box-sizing: border-box;
     align-items: center;
 
+    /* 2 formules :
+       40% adresse
+       30% conseillée
+       30% personnalisée
+    */
     &.two-formules {
-        grid-template-columns: 40fr 30fr 30fr;
+        grid-template-columns:
+            minmax(0, 40fr)
+            minmax(0, 30fr)
+            minmax(0, 30fr);
     }
 
+    /* 1 seule formule :
+       40% adresse
+       60% formule
+    */
     &.one-formule {
-        grid-template-columns: 40fr 60fr;
+        grid-template-columns:
+            minmax(0, 40fr)
+            minmax(0, 60fr);
     }
 }
 
-.col-adresse,
-.col-formule,
-.total-label,
-.total-formule {
-    min-width: 0;
-    box-sizing: border-box;
-}
-
+/* Colonne de gauche : TOTAL */
 .total-label {
-    font-weight: 700;
+    width: auto;
+    min-width: 0;
+
+    font-size: 14px;
+    font-style: normal;
+    line-height: normal;
 }
 
-.total-formule {
+/* Valeurs 0,00 € */
+.total-row .col-select {
     width: 100%;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     text-align: center;
-    margin: 0;
-    padding: 0;
+}
+
+/* La colonne adresse ne doit plus imposer de flex */
+.total-row .col-adresse {
+    width: auto;
+    min-width: 0;
 }
