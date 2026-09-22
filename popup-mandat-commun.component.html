@@ -1,45 +1,91 @@
 <div class="mandat-commun-popup">
+
     <div class="mandat-commun-header">
         <h2>Mandat commun - Sélection des risques</h2>
-        <button type="button" class="mandat-close" (click)="annuler()" aria-label="Fermer">×</button>
+
+        <button
+            type="button"
+            class="mandat-close"
+            aria-label="Fermer"
+            (click)="annuler()">
+            ×
+        </button>
     </div>
 
-    <p class="mandat-commun-intro">
-        Veuillez sélectionner les risques concernés par le mandat commun.<br>
-        Les risques doivent émaner d'un même assureur, même cadre, même statut et même numéro de contrat.
-    </p>
+    <div class="mandat-commun-intro">
+        <div>
+            Veuillez sélectionner les risques concernés par le mandat commun.
+        </div>
+
+        <div>
+            Les risques doivent émaner d'un même assureur,
+            même cadre, même statut et même numéro de contrat.
+        </div>
+    </div>
 
     <div class="mandat-commun-grid">
-        <label class="mandat-risk-card" *ngFor="let risque of risques">
-            <input type="checkbox" [(ngModel)]="risque.selection">
+
+        <label
+            class="mandat-risk-card"
+            *ngFor="let risque of risques"
+            [class.selected]="risque.selection">
+
+            <input
+                class="mandat-risk-checkbox"
+                type="checkbox"
+                [(ngModel)]="risque.selection">
 
             <div class="mandat-risk-card-content">
-                <div class="mandat-risk-cadre">{{ getCadreLib(risque.cadreCcr) }}</div>
-                <div class="mandat-risk-main">{{ risque.type }}</div>
-                <div class="mandat-risk-detail">
-                    {{ risque.usage }} | {{ risque.statut }} | {{ risque.nbPieces }} pièces
+
+                <div class="mandat-risk-cadre">
+                    {{ getCadreLib(risque.cadreCcr) }}
                 </div>
+
+                <div class="mandat-risk-main">
+                    {{ risque.type }}
+                </div>
+
+                <div class="mandat-risk-detail">
+                    {{ risque.usage }}
+                    <span>|</span>
+                    {{ risque.statut }}
+                    <span>|</span>
+                    {{ risque.nbPieces }} pièces
+                </div>
+
                 <div class="mandat-risk-detail">
                     {{ risque.codePostal }} {{ risque.ville }}
                 </div>
+
             </div>
+
         </label>
+
     </div>
 
-    <div class="mandat-error" *ngIf="getMessageBlocage()">
+    <div
+        class="mandat-error"
+        *ngIf="getMessageBlocage()">
         {{ getMessageBlocage() }}
     </div>
 
     <div class="mandat-commun-footer">
-        <button type="button" class="chgt-link mandat-cancel" (click)="annuler()">
+
+        <button
+            type="button"
+            class="mandat-cancel"
+            (click)="annuler()">
             Annuler
         </button>
 
-        <button type="button"
-                class="chgt-button obligatoire"
-                [disabled]="!isSelectionValide()"
-                (click)="creerMandatCommun()">
+        <button
+            type="button"
+            class="mandat-primary-button"
+            [disabled]="!isSelectionValide()"
+            (click)="creerMandatCommun()">
             Créer un mandat commun
         </button>
+
     </div>
+
 </div>
