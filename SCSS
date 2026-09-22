@@ -1,67 +1,223 @@
-.total-row {
-    margin-top: 30px;
-    align-items: center;
-}
-
-/* =========================================================
-   MÊME GRILLE POUR LES RISQUES + PACKS + TOTAL
-   ========================================================= */
-
-.pack-row,
-.total-row {
-    display: grid;
-    width: 100%;
-    column-gap: 8px;
+.edition-mandat {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-    align-items: center;
 
-    /* 2 formules :
-       40% adresse
-       30% conseillée
-       30% personnalisée
-    */
-    &.two-formules {
-        grid-template-columns:
-            minmax(0, 40fr)
-            minmax(0, 30fr)
-            minmax(0, 30fr);
+    .mandat-common-info {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+
+        padding: 12px 16px;
+        margin: 0 0 16px 0;
+
+        box-sizing: border-box;
+        background: #f4eadc;
+
+        font-size: 13px;
+        line-height: 18px;
     }
 
-    /* 1 seule formule :
-       40% adresse
-       60% formule
-    */
-    &.one-formule {
-        grid-template-columns:
-            minmax(0, 40fr)
-            minmax(0, 60fr);
+    .mandat-common-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .mandat-link {
+        border: 0;
+        background: transparent;
+        padding: 0;
+
+        cursor: pointer;
+        white-space: nowrap;
+
+        color: var(--Color-Orange, #b54825);
+        text-decoration: underline;
+
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .mandat-common-action {
+        flex: 0 0 auto;
+    }
+
+    .mandat-risk-grid {
+        width: 100%;
+
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        column-gap: 24px;
+        row-gap: 14px;
+
+        box-sizing: border-box;
+    }
+
+    .mandat-risk {
+        position: relative;
+
+        width: 100%;
+        min-width: 0;
+
+        padding: 10px 12px;
+
+        border: 1px solid transparent;
+        box-sizing: border-box;
+
+        background: #fff;
+    }
+
+    .mandat-risk-created {
+        border-color: #58a36d;
+    }
+
+    .mandat-risk-header {
+        width: 100%;
+
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+
+        gap: 12px;
+
+        margin-bottom: 5px;
+    }
+
+    .mandat-risk-title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+
+        min-width: 0;
+    }
+
+    .mandat-created-check {
+        flex: 0 0 auto;
+
+        width: 17px;
+        height: 17px;
+
+        accent-color: var(--Color-Orange, #b54825);
+    }
+
+    .mandat-risk-cadre {
+        color: var(--Color-Blue, #234b70);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .mandat-risk-action-wrap {
+        position: relative;
+        flex: 0 0 auto;
+    }
+
+    .mandat-risk-action {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .mandat-action-arrow {
+        font-size: 12px;
+        text-decoration: none;
+    }
+
+    .mandat-risk-type {
+        margin-top: 2px;
+        margin-bottom: 3px;
+
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .mandat-risk-detail {
+        font-size: 12px;
+        line-height: 17px;
+        white-space: normal;
+    }
+
+    .mandat-separator {
+        padding: 0 3px;
+    }
+
+    .mandat-recreate-menu {
+        position: absolute;
+
+        z-index: 50;
+
+        right: 0;
+        top: calc(100% + 5px);
+
+        width: 230px;
+
+        border: 1px solid #d1d1d1;
+        background: #fff;
+
+        box-shadow: 0 3px 10px rgb(0 0 0 / 15%);
+
+        button {
+            display: block;
+
+            width: 100%;
+
+            padding: 9px 12px;
+
+            border: 0;
+            background: #fff;
+
+            text-align: left;
+
+            font-family: inherit;
+            font-size: 13px;
+
+            cursor: pointer;
+
+            &:hover {
+                background: #f5f5f5;
+            }
+        }
+    }
+
+    .mandat-letter-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        margin-top: 16px;
+
+        font-size: 13px;
+
+        input {
+            accent-color: var(--Color-Orange, #b54825);
+        }
+    }
+
+    .mandat-send-row {
+        width: 100%;
+
+        display: flex;
+        justify-content: flex-end;
+
+        margin-top: 18px;
     }
 }
 
-/* Colonne de gauche : TOTAL */
-.total-label {
-    width: auto;
-    min-width: 0;
+@media screen and (max-width: 700px) {
+    .edition-mandat {
+        .mandat-risk-grid {
+            grid-template-columns: 1fr;
+        }
 
-    font-size: 14px;
-    font-style: normal;
-    line-height: normal;
-}
-
-/* Valeurs 0,00 € */
-.total-row .col-select {
-    width: 100%;
-    min-width: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    text-align: center;
-}
-
-/* La colonne adresse ne doit plus imposer de flex */
-.total-row .col-adresse {
-    width: auto;
-    min-width: 0;
+        .mandat-common-info {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
 }
