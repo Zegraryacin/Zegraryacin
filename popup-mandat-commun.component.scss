@@ -1,0 +1,104 @@
+.mandat-commun-popup {
+    width: min(760px, 92vw);
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.mandat-commun-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #d7d7d7;
+    padding-bottom: 12px;
+
+    h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--Color-Blue, #123b66);
+    }
+}
+
+.mandat-close {
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--Color-Orange, #b84824);
+}
+
+.mandat-commun-intro {
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.mandat-commun-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.mandat-risk-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border: 1px solid #d7d7d7;
+    border-radius: 4px;
+    padding: 12px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.mandat-risk-card input {
+    margin-top: 4px;
+}
+
+.mandat-risk-card-content {
+    min-width: 0;
+}
+
+.mandat-risk-cadre {
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: var(--Color-Blue, #123b66);
+}
+
+.mandat-risk-main {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.mandat-risk-detail {
+    font-size: 13px;
+    line-height: 18px;
+}
+
+.mandat-error {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #f8eeee;
+    border: 1px solid #c56b6b;
+    font-size: 13px;
+}
+
+.mandat-commun-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.mandat-cancel {
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+
+@media screen and (max-width: 700px) {
+    .mandat-commun-grid {
+        grid-template-columns: 1fr;
+    }
+}

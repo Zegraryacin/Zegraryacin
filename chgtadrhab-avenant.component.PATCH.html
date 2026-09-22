@@ -1,0 +1,143 @@
+<!--
+A INSERER dans la boucle :
+<ng-container *ngFor="let code of Constantes.HAB_EDITION_DOCUMENTS">
+
+Placement : juste après le bloc .recapitulatif et avant les autres
+<div *ngIf="isShow(code, ...)" des attestations.
+-->
+
+<div *ngIf="isShow(code, Constantes.HAB_EDITION_MANDAT_RESILIATION)"
+     class="document edition-mandat">
+
+    <!-- Etat AVANT envoi : création / recréation -->
+    <ng-container *ngIf="!isDocumentEnvoye(code); else mandatEnvoye">
+
+        <div class="mandat-common-info" *ngIf="listMandats.length > 1">
+            <span>
+                Veuillez créer un seul mandat si plusieurs risques émanent d'un même assureur,
+                même cadre, même statut et même numéro de contrat.
+            </span>
+
+            <button type="button"
+                    class="chgt-link mandat-common-action"
+                    (click)="ouvrirPopupMandatCommun()">
+                {{ Constantes.HAB_MANDAT_COMMUN_LIB }}
+            </button>
+        </div>
+
+        <div class="mandat-risk-grid">
+            <div class="mandat-risk" *ngFor="let risque of listMandats">
+                <div class="mandat-risk-top">
+                    <div class="mandat-created-check">
+                        <input type="checkbox"
+                               [checked]="isMandatCree(risque)"
+                               disabled>
+                    </div>
+
+                    <span class="mandat-risk-cadre">
+                        {{ getCadreMandatLib(risque.cadreCcr) }}
+                    </span>
+
+                    <div class="mandat-risk-action-wrap">
+                        <button type="button"
+                                class="chgt-link mandat-risk-action"
+                                (click)="onClickActionMandat(risque)">
+                            {{ getMandatActionLib(risque) }}
+                            <span *ngIf="isMandatCree(risque)">⌄</span>
+                        </button>
+
+                        <div class="mandat-recreate-menu"
+                             *ngIf="isMenuMandatOuvert(risque)">
+                            <button type="button"
+                                    (click)="recreerMandatUnitaire(risque)">
+                                Recréer un mandat unitaire
+                            </button>
+
+                            <button type="button"
+                                    (click)="recreerMandatCommun(risque)"
+                                    *ngIf="listMandats.length > 1">
+                                Recréer un mandat commun
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mandat-risk-main">{{ risque.type }}</div>
+                <div class="mandat-risk-detail">
+                    {{ risque.usage }} | {{ risque.statut }} | {{ risque.nbPieces }} pièces
+                </div>
+                <div class="mandat-risk-detail">
+                    {{ risque.codePostal }} {{ risque.ville }}
+                </div>
+            </div>
+        </div>
+
+        <label class="mandat-letter-line" *ngIf="hasMandatCree()">
+            <input type="checkbox"
+                   [checked]="lettresResiliationSelectionnees"
+                   disabled>
+            <span>Lettres de résiliation</span>
+        </label>
+
+        <!--
+            Jira : "Modèle de lettre de résiliation Loi Hamon Propriétaire".
+            Le contrat réseau / nom du paramètre permettant d'envoyer cette sélection
+            n'apparaît dans AUCUN des payloads fournis.
+            On ne l'invente donc pas.
+
+            Quand Georges / le backend confirme ce paramètre, décommenter l'UI
+            et l'ajouter au bon appel worker.
+
+        <label class="mandat-letter-line"
+               *ngIf="isModeleLettreHamonProprietaireVisible()">
+            <input type="checkbox"
+                   [(ngModel)]="modeleLettreHamonProprietaireSelectionne">
+            <span>Modèle de lettre de résiliation Loi Hamon Propriétaire</span>
+        </label>
+        -->
+
+        <!-- Jira : PAS de choix de canal -->
+        <div class="ligne-with-button mandat-send-row">
+            <button type="button"
+                    class="chgt-button obligatoire"
+                    [disabled]="isEnvoiDocumentDisabled(code)"
+                    (click)="onClickEnvoiDocument(code)">
+                {{ Constantes.HAB_MANDAT_ENVOYER_LIB }}
+            </button>
+        </div>
+    </ng-container>
+
+    <!-- Etat APRES envoi : la flèche permet d'afficher les documents envoyés -->
+    <ng-template #mandatEnvoye>
+        <div class="mandat-risk-grid mandat-risk-grid-sent">
+            <div class="mandat-risk mandat-risk-sent"
+                 *ngFor="let risque of listMandats"
+                 [class.mandat-risk-created]="isMandatCree(risque)">
+
+                <div class="mandat-risk-top">
+                    <div class="mandat-created-check">
+                        <input type="checkbox"
+                               [checked]="isMandatCree(risque)"
+                               disabled>
+                    </div>
+                    <span class="mandat-risk-cadre">
+                        {{ getCadreMandatLib(risque.cadreCcr) }}
+                    </span>
+                </div>
+
+                <div class="mandat-risk-main">{{ risque.type }}</div>
+                <div class="mandat-risk-detail">
+                    {{ risque.usage }} | {{ risque.statut }} | {{ risque.nbPieces }} pièces
+                </div>
+                <div class="mandat-risk-detail">
+                    {{ risque.codePostal }} {{ risque.ville }}
+                </div>
+            </div>
+        </div>
+
+        <label class="mandat-letter-line" *ngIf="lettresResiliationSelectionnees">
+            <input type="checkbox" checked disabled>
+            <span>Lettres de résiliation</span>
+        </label>
+    </ng-template>
+</div>

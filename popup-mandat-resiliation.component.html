@@ -1,0 +1,171 @@
+<div class="mandat-resiliation-popup">
+    <div class="mandat-resiliation-header">
+        <h2>Mandat et LR Notification résiliation</h2>
+        <button type="button" class="mandat-close" (click)="annuler()" aria-label="Fermer">×</button>
+    </div>
+
+    <section class="mandat-section">
+        <h3>Assuré actuel</h3>
+
+        <div class="mandat-field mandat-field-full">
+            <label>Est-ce que vous êtes l'assuré actuel ? <span class="required">*</span></label>
+            <div class="mandat-choice-row">
+                <button type="button"
+                        class="chgt-select-button"
+                        [class.selected]="assureActuel === Constantes.OUI"
+                        [class.not-selected]="assureActuel !== Constantes.OUI"
+                        (click)="assureActuel = Constantes.OUI">
+                    Oui
+                </button>
+                <button type="button"
+                        class="chgt-select-button"
+                        [class.selected]="assureActuel === Constantes.NON"
+                        [class.not-selected]="assureActuel !== Constantes.NON"
+                        (click)="assureActuel = Constantes.NON">
+                    Non
+                </button>
+            </div>
+        </div>
+
+        <div class="mandat-grid-3">
+            <div class="mandat-field">
+                <label for="mandatCivilite">Civilité <span class="required">*</span></label>
+                <select id="mandatCivilite" [(ngModel)]="mandat.civilite">
+                    <option value="" disabled>Choisir</option>
+                    <option value="MME">Mme</option>
+                    <option value="M">M</option>
+                </select>
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatNom">Nom <span class="required">*</span></label>
+                <input id="mandatNom" type="text" [(ngModel)]="mandat.nom">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatPrenom">Prénom <span class="required">*</span></label>
+                <input id="mandatPrenom" type="text" [(ngModel)]="mandat.prenom">
+            </div>
+        </div>
+    </section>
+
+    <section class="mandat-section">
+        <h3>Assureur actuel</h3>
+
+        <div class="mandat-grid-2">
+            <div class="mandat-field mandat-field-full">
+                <label for="mandatNomAssureur">Compagnie concurrente <span class="required">*</span></label>
+                <input id="mandatNomAssureur" type="text" [(ngModel)]="mandat.nomAssureur">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatDesignation">Adresse désignation</label>
+                <input id="mandatDesignation" type="text" [(ngModel)]="mandat.designation">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatDistribution">Distribution</label>
+                <input id="mandatDistribution" type="text" [(ngModel)]="mandat.distribution">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatVoie">Voie <span class="required">*</span></label>
+                <input id="mandatVoie" type="text" [(ngModel)]="mandat.voie">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatLieuDit">Lieu dit</label>
+                <input id="mandatLieuDit" type="text" [(ngModel)]="mandat.lieuDit">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatLocalite">Ville <span class="required">*</span></label>
+                <input id="mandatLocalite" type="text" [(ngModel)]="mandat.localite">
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatCodePostal">Code postal <span class="required">*</span></label>
+                <input id="mandatCodePostal" type="text" [(ngModel)]="mandat.codePostal">
+            </div>
+
+            <!--
+                TODO BACKEND : la maquette Jira affiche "Pays", mais aucun champ "pays"
+                n'apparaît dans les JSON fournis. Ne pas inventer un paramètre réseau.
+            -->
+
+            <div class="mandat-field mandat-field-full">
+                <label>Validation adresse <span class="required">*</span></label>
+                <div class="mandat-choice-row">
+                    <button type="button"
+                            class="chgt-select-button"
+                            [class.selected]="mandat.validation === Constantes.OUI"
+                            [class.not-selected]="mandat.validation !== Constantes.OUI"
+                            (click)="mandat.validation = Constantes.OUI">
+                        Oui
+                    </button>
+                    <button type="button"
+                            class="chgt-select-button"
+                            [class.selected]="mandat.validation === Constantes.NON"
+                            [class.not-selected]="mandat.validation !== Constantes.NON"
+                            (click)="mandat.validation = Constantes.NON">
+                        Non
+                    </button>
+                </div>
+            </div>
+
+            <div class="mandat-field mandat-field-full">
+                <label for="mandatNumContrat">N° du contrat chez l'assureur actuel <span class="required">*</span></label>
+                <input id="mandatNumContrat" type="text" [(ngModel)]="mandat.numContrat">
+            </div>
+        </div>
+    </section>
+
+    <section class="mandat-section mandat-resiliation-block" *ngIf="afficherBlocResiliation()">
+        <h3>Résiliation</h3>
+
+        <div class="mandat-grid-2">
+            <div class="mandat-field">
+                <label for="mandatFondement">Fondement de la résiliation <span class="required">*</span></label>
+                <select id="mandatFondement" [(ngModel)]="mandat.fondementResiliation">
+                    <option value="" disabled>Choisir</option>
+                    <option *ngFor="let item of fondResil" [value]="item.cle">
+                        {{ item.libelle }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="mandat-field">
+                <label for="mandatMotif">Motif <span class="required">*</span></label>
+                <select id="mandatMotif" [(ngModel)]="mandat.motif">
+                    <option value="" disabled>Choisir</option>
+                    <option *ngFor="let item of motifResil" [value]="item.cle">
+                        {{ item.libelle }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="mandat-field mandat-field-full">
+                <label for="mandatDateEvt">Si vente ou perte du risque, date de cet événement</label>
+                <input id="mandatDateEvt" type="date" [(ngModel)]="mandat.dateEvt">
+            </div>
+        </div>
+    </section>
+
+    <div class="mandat-error" *ngIf="erreur">{{ erreur }}</div>
+
+    <div class="mandat-resiliation-footer">
+        <button type="button" class="chgt-link mandat-cancel" (click)="annuler()">
+            Annuler
+        </button>
+
+        <div class="mandat-footer-right">
+            <span class="mandat-required-info">*Champs obligatoires</span>
+            <button type="button"
+                    class="chgt-button obligatoire"
+                    [disabled]="!isFormulaireValide() || loading"
+                    (click)="enregistrerMandat()">
+                Créer le mandat
+            </button>
+        </div>
+    </div>
+</div>

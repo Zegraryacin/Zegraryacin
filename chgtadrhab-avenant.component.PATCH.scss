@@ -1,0 +1,130 @@
+// ============================================================
+// A AJOUTER à chgtadrhab-avenant.component.scss
+// ============================================================
+
+.edition-mandat {
+    .mandat-common-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        background: #fbf3e7;
+        box-sizing: border-box;
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    .mandat-common-action,
+    .mandat-risk-action {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .mandat-risk-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .mandat-risk {
+        position: relative;
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid #d7d7d7;
+        border-radius: 3px;
+        box-sizing: border-box;
+    }
+
+    .mandat-risk-created {
+        background: #f4f4f4;
+    }
+
+    .mandat-risk-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 7px;
+    }
+
+    .mandat-created-check {
+        flex: 0 0 auto;
+    }
+
+    .mandat-risk-cadre {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-weight: 600;
+        color: var(--Color-Blue, #123b66);
+    }
+
+    .mandat-risk-action-wrap {
+        position: relative;
+        flex: 0 0 auto;
+    }
+
+    .mandat-recreate-menu {
+        position: absolute;
+        z-index: 10;
+        top: calc(100% + 4px);
+        right: 0;
+        min-width: 220px;
+        border: 1px solid #cfcfcf;
+        background: #fff;
+        box-shadow: 0 3px 10px rgb(0 0 0 / 12%);
+
+        button {
+            width: 100%;
+            border: 0;
+            background: #fff;
+            padding: 9px 12px;
+            text-align: left;
+            cursor: pointer;
+
+            &:hover {
+                background: #f4f4f4;
+            }
+        }
+    }
+
+    .mandat-risk-main {
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+
+    .mandat-risk-detail {
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    .mandat-letter-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        font-size: 13px;
+    }
+
+    .mandat-send-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .edition-mandat {
+        .mandat-common-info {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .mandat-risk-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+}
