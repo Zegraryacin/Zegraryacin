@@ -1,21 +1,194 @@
 <div
-  class="total-row"
-  [class.one-formule]="nbFormules === 1"
-  [class.two-formules]="nbFormules === 2">
+    *ngIf="isShow(code, Constantes.HAB_EDITION_MANDAT_RESILIATION)"
+    class="document edition-mandat">
 
-  <div class="total-label">
-    TOTAL
-  </div>
+    <ng-container *ngIf="!isDocumentEnvoye(code); else mandatEnvoye">
 
-  <div
-    class="total-formule"
-    *ngIf="afficherFormuleConseillee">
-    {{ totalFormuleConseillee }} €
-  </div>
+        <!-- Bandeau mandat commun -->
+        <div
+            class="mandat-common-info"
+            *ngIf="listMandats.length > 1">
 
-  <div
-    class="total-formule"
-    *ngIf="afficherFormulePersonnalisee">
-    {{ totalFormulePersonnalisee }} €
-  </div>
+            <div class="mandat-common-text">
+                Veuillez créer un seul mandat si plusieurs risques émanent
+                d'un même assureur, même cadre, même statut et même numéro de contrat.
+            </div>
+
+            <button
+                type="button"
+                class="mandat-link mandat-common-action"
+                (click)="ouvrirPopupMandatCommun()">
+                Créer un mandat commun
+            </button>
+        </div>
+
+        <!-- Liste des risques -->
+        <div class="mandat-risk-grid">
+
+            <div
+                class="mandat-risk"
+                *ngFor="let risque of listMandats"
+                [class.mandat-risk-created]="isMandatCree(risque)">
+
+                <div class="mandat-risk-header">
+
+                    <div class="mandat-risk-title">
+
+                        <!--
+                            Jira : la case cochée apparaît après création.
+                            Donc pas de checkbox vide avant création.
+                        -->
+                        <input
+                            *ngIf="isMandatCree(risque)"
+                            class="mandat-created-check"
+                            type="checkbox"
+                            checked
+                            disabled>
+
+                        <span class="mandat-risk-cadre">
+                            {{ getCadreMandatLib(risque.cadreCcr) }}
+                        </span>
+                    </div>
+
+                    <div class="mandat-risk-action-wrap">
+
+                        <button
+                            type="button"
+                            class="mandat-link mandat-risk-action"
+                            (click)="onClickActionMandat(risque)">
+
+                            {{ getMandatActionLib(risque) }}
+
+                            <span
+                                class="mandat-action-arrow"
+                                *ngIf="isMandatCree(risque)">
+                                ▾
+                            </span>
+                        </button>
+
+                        <div
+                            class="mandat-recreate-menu"
+                            *ngIf="isMenuMandatOuvert(risque)">
+
+                            <button
+                                type="button"
+                                (click)="recreerMandatUnitaire(risque)">
+                                Recommencer le mandat unitaire
+                            </button>
+
+                            <button
+                                type="button"
+                                *ngIf="listMandats.length > 1"
+                                (click)="recreerMandatCommun(risque)">
+                                Recommencer le mandat commun
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mandat-risk-type">
+                    {{ risque.type }}
+                </div>
+
+                <div class="mandat-risk-detail">
+                    {{ risque.usage }}
+                    <span class="mandat-separator">|</span>
+                    {{ risque.statut }}
+                    <span class="mandat-separator">|</span>
+                    {{ risque.nbPieces }} pièces
+                </div>
+
+                <div class="mandat-risk-detail">
+                    {{ risque.codePostal }} {{ risque.ville }}
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Lettres de résiliation -->
+        <label
+            class="mandat-letter-line"
+            *ngIf="hasMandatCree()">
+
+            <input
+                type="checkbox"
+                [checked]="lettresResiliationSelectionnees"
+                disabled>
+
+            <span>Lettres de résiliation</span>
+        </label>
+
+        <!-- Envoi -->
+        <div class="mandat-send-row">
+            <button
+                type="button"
+                class="chgt-button obligatoire"
+                [disabled]="isEnvoiDocumentDisabled(code)"
+                (click)="onClickEnvoiDocument(code)">
+                Envoyer les documents
+            </button>
+        </div>
+
+    </ng-container>
+
+    <!-- Après envoi -->
+    <ng-template #mandatEnvoye>
+
+        <div class="mandat-risk-grid">
+
+            <div
+                class="mandat-risk mandat-risk-sent"
+                *ngFor="let risque of listMandats"
+                [class.mandat-risk-created]="isMandatCree(risque)">
+
+                <div class="mandat-risk-header">
+
+                    <div class="mandat-risk-title">
+
+                        <input
+                            *ngIf="isMandatCree(risque)"
+                            class="mandat-created-check"
+                            type="checkbox"
+                            checked
+                            disabled>
+
+                        <span class="mandat-risk-cadre">
+                            {{ getCadreMandatLib(risque.cadreCcr) }}
+                        </span>
+
+                    </div>
+                </div>
+
+                <div class="mandat-risk-type">
+                    {{ risque.type }}
+                </div>
+
+                <div class="mandat-risk-detail">
+                    {{ risque.usage }}
+                    <span class="mandat-separator">|</span>
+                    {{ risque.statut }}
+                    <span class="mandat-separator">|</span>
+                    {{ risque.nbPieces }} pièces
+                </div>
+
+                <div class="mandat-risk-detail">
+                    {{ risque.codePostal }} {{ risque.ville }}
+                </div>
+
+            </div>
+
+        </div>
+
+        <label
+            class="mandat-letter-line"
+            *ngIf="lettresResiliationSelectionnees">
+
+            <input type="checkbox" checked disabled>
+            <span>Lettres de résiliation</span>
+
+        </label>
+
+    </ng-template>
+
 </div>
