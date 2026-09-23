@@ -27,11 +27,17 @@ export class PopupMandatResiliationComponent implements OnInit {
     public motifResil: MandatPf4ModelInterface[] = [];
 
     /**
-     * La maquette Jira contient cette question, mais aucun nom de champ backend
-     * correspondant n'a été fourni dans les JSON envoiavthabmandat.
-     * On la garde donc comme état UI uniquement et on ne l'invente pas dans le payload.
+     * Présent dans la maquette Jira, mais aucun champ backend correspondant
+     * n'a été fourni dans les entrées/sorties envoiavthabmandat.
+     * Cette valeur reste donc uniquement dans l'UI et n'est jamais envoyée.
      */
     public assureActuel = '';
+
+    /**
+     * La maquette Jira affiche Pays = France, mais le contrat G4EM fourni
+     * ne contient aucun champ "pays". Affichage uniquement, jamais envoyé.
+     */
+    public readonly paysAffiche = 'France';
 
     public loading = false;
     public erreur = '';
@@ -58,7 +64,12 @@ export class PopupMandatResiliationComponent implements OnInit {
             : [];
     }
 
-    /** H = Hamon : le bloc Résiliation n'apparaît pas. C/A : il apparaît. */
+    /**
+     * Règle Jira / worker :
+     * - H = Hamon  -> le bloc Résiliation ne doit pas être affiché.
+     * - C = Chatel -> le bloc Résiliation doit être affiché.
+     * - A = Autre  -> le bloc Résiliation doit être affiché.
+     */
     public afficherBlocResiliation(): boolean {
         return this.dialogData.cadreCcr !== this.Constantes.CADRE_CCR_HAMON;
     }
@@ -91,10 +102,10 @@ export class PopupMandatResiliationComponent implements OnInit {
         );
 
         /*
-         * TODO BACKEND / REGLE METIER NON FOURNIE :
-         * la Jira dit "Si vente ou perte du risque, date de cet événement".
-         * Le mapping exact permettant de savoir quand dateEvt devient obligatoire
-         * n'a pas été fourni. Ne pas coder une valeur de code au hasard.
+         * Ne pas rendre dateEvt obligatoire ici sans règle complémentaire.
+         * La Jira dit : "Si vente ou perte du risque, date de cet événement",
+         * mais le code exact de fondement/motif déclenchant cette obligation
+         * n'a pas été fourni dans les éléments disponibles.
          */
     }
 
@@ -103,11 +114,13 @@ export class PopupMandatResiliationComponent implements OnInit {
     }
 
     /**
-     * Bouton "Créer le mandat" de la popup.
+     * Bouton "Créer le mandat" de la pop-in.
      *
-     * Ici on fait le 2e appel envoiavthabmandat : mise à jour / validation G4EM.
-     * On NE fait PAS le 3e appel ici : d'après la Jira, celui-ci correspond au bouton
-     * "Envoyer les documents" de l'écran édition.
+     * Ce bouton fait uniquement le 2e appel envoiavthabmandat :
+     * mise à jour / validation de l'écran G4EM.
+     *
+     * Le 3e appel envoiavthabmandat appartient au bouton
+     * "Envoyer les documents" de l'écran d'édition et ne doit pas être fait ici.
      */
     public enregistrerMandat(): void {
         if (!this.isFormulaireValide() || this.loading) {
@@ -140,7 +153,7 @@ export class PopupMandatResiliationComponent implements OnInit {
                     };
                 }
 
-                // Règle confirmée : retour OK sans exception => mandat considéré créé.
+                // Règle confirmée : retour OK sans exception => mandat créé.
                 const retour: PopupMandatResiliationResultInterface = {
                     created: true,
                     cadreCcr: this.dialogData.cadreCcr,
@@ -158,6 +171,11 @@ export class PopupMandatResiliationComponent implements OnInit {
         });
     }
 
+    /**
+     * 2e appel envoiavthabmandat.
+     * On envoie uniquement les champs documentés par le worker.
+     * Les champs du bloc Résiliation ne sont ajoutés que si le bloc existe.
+     */
     private buildUpdateParameters(): MandatUpdateParametersInterface {
         const parameters: MandatUpdateParametersInterface = {
             voie: this.mandat.voie,
@@ -174,7 +192,6 @@ export class PopupMandatResiliationComponent implements OnInit {
             nomAssureur: this.mandat.nomAssureur
         };
 
-        // Les 3 champs ci-dessous ne doivent être envoyés que lorsque le bloc existe.
         if (this.afficherBlocResiliation()) {
             parameters.fondementResiliation = this.mandat.fondementResiliation;
             parameters.motif = this.mandat.motif;
