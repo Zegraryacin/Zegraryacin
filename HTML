@@ -1,194 +1,102 @@
-<div
-    *ngIf="isShow(code, Constantes.HAB_EDITION_MANDAT_RESILIATION)"
-    class="document edition-mandat">
+private gereEnvoiMandatDocuments(): void {
 
-    <ng-container *ngIf="!isDocumentEnvoye(code); else mandatEnvoye">
+    const dataIn: DataInModelInterface = {
+        idDossier: this.service.getCommunContexte().dossierId,
+        resourceId: this.service.getCommunContexte().resourceId,
 
-        <!-- Bandeau mandat commun -->
-        <div
-            class="mandat-common-info"
-            *ngIf="listMandats.length > 1">
+        /*
+         * 3e appel envoiavthabmandat :
+         * aucun paramètre métier nécessaire.
+         */
+        parameters: {},
 
-            <div class="mandat-common-text">
-                Veuillez créer un seul mandat si plusieurs risques émanent
-                d'un même assureur, même cadre, même statut et même numéro de contrat.
-            </div>
+        screenkey: this.Constantes.SCREEN_GENERIC
+    };
 
-            <button
-                type="button"
-                class="mandat-link mandat-common-action"
-                (click)="ouvrirPopupMandatCommun()">
-                Créer un mandat commun
-            </button>
-        </div>
+    this.service.envoiAvenantMandat(dataIn).subscribe({
 
-        <!-- Liste des risques -->
-        <div class="mandat-risk-grid">
+        next: result => {
 
-            <div
-                class="mandat-risk"
-                *ngFor="let risque of listMandats"
-                [class.mandat-risk-created]="isMandatCree(risque)">
+            if (!this.isMandatResponseOK(result)) {
 
-                <div class="mandat-risk-header">
+                this.spinner.hide();
 
-                    <div class="mandat-risk-title">
+                this.service.errorPopup(
+                    result,
+                    this.Constantes.AVENANT_COMPONENT,
+                    'gereEnvoiMandatDocuments'
+                );
 
-                        <!--
-                            Jira : la case cochée apparaît après création.
-                            Donc pas de checkbox vide avant création.
-                        -->
-                        <input
-                            *ngIf="isMandatCree(risque)"
-                            class="mandat-created-check"
-                            type="checkbox"
-                            checked
-                            disabled>
+                return;
+            }
 
-                        <span class="mandat-risk-cadre">
-                            {{ getCadreMandatLib(risque.cadreCcr) }}
-                        </span>
-                    </div>
+            const edition = this.getEditionFromList(
+                this.Constantes.HAB_EDITION_MANDAT_RESILIATION
+            );
 
-                    <div class="mandat-risk-action-wrap">
+            /*
+             * Ne surtout pas utiliser :
+             *
+             * const edition = ... !
+             *
+             * car si l'édition n'est pas trouvée,
+             * on aurait une exception avant spinner.hide().
+             */
+            if (!edition) {
 
-                        <button
-                            type="button"
-                            class="mandat-link mandat-risk-action"
-                            (click)="onClickActionMandat(risque)">
+                console.error(
+                    '[MANDAT] Edition Mandat de résiliation introuvable',
+                    this.listEditions
+                );
 
-                            {{ getMandatActionLib(risque) }}
+                this.spinner.hide();
+                return;
+            }
 
-                            <span
-                                class="mandat-action-arrow"
-                                *ngIf="isMandatCree(risque)">
-                                ▾
-                            </span>
-                        </button>
+            /*
+             * Le worker a terminé l'envoi.
+             *
+             * Exemple de réponse documentée :
+             *
+             * type    = I
+             * code    = PG4ALIO-0004-
+             * message = Transaction terminée OK
+             */
+            edition.isEnvoyer = true;
+            edition.isVoirPlus = true;
 
-                        <div
-                            class="mandat-recreate-menu"
-                            *ngIf="isMenuMandatOuvert(risque)">
+            edition.bilanEnvoi = this.getBilanEnvoiMandat();
 
-                            <button
-                                type="button"
-                                (click)="recreerMandatUnitaire(risque)">
-                                Recommencer le mandat unitaire
-                            </button>
+            this.spinner.hide();
+        },
 
-                            <button
-                                type="button"
-                                *ngIf="listMandats.length > 1"
-                                (click)="recreerMandatCommun(risque)">
-                                Recommencer le mandat commun
-                            </button>
+        error: error => {
 
-                        </div>
-                    </div>
-                </div>
+            console.error(
+                '[MANDAT] Erreur envoiavthabmandat final',
+                error
+            );
 
-                <div class="mandat-risk-type">
-                    {{ risque.type }}
-                </div>
+            this.spinner.hide();
+        }
+    });
 
-                <div class="mandat-risk-detail">
-                    {{ risque.usage }}
-                    <span class="mandat-separator">|</span>
-                    {{ risque.statut }}
-                    <span class="mandat-separator">|</span>
-                    {{ risque.nbPieces }} pièces
-                </div>
 
-                <div class="mandat-risk-detail">
-                    {{ risque.codePostal }} {{ risque.ville }}
-                </div>
 
-            </div>
-        </div>
 
-        <!-- Lettres de résiliation -->
-        <label
-            class="mandat-letter-line"
-            *ngIf="hasMandatCree()">
+private isMandatResponseOK(
+    result: DataOutChgtadrhabModelInterface | ErrorModelInterface
+): result is DataOutChgtadrhabModelInterface {
 
-            <input
-                type="checkbox"
-                [checked]="lettresResiliationSelectionnees"
-                disabled>
+    return 'data' in result
+        && 'message' in result
+        && result.message?.type !== this.Constantes.TYPE_MESSAGE_ERREUR;
+}
 
-            <span>Lettres de résiliation</span>
-        </label>
 
-        <!-- Envoi -->
-        <div class="mandat-send-row">
-            <button
-                type="button"
-                class="chgt-button obligatoire"
-                [disabled]="isEnvoiDocumentDisabled(code)"
-                (click)="onClickEnvoiDocument(code)">
-                Envoyer les documents
-            </button>
-        </div>
 
-    </ng-container>
 
-    <!-- Après envoi -->
-    <ng-template #mandatEnvoye>
 
-        <div class="mandat-risk-grid">
 
-            <div
-                class="mandat-risk mandat-risk-sent"
-                *ngFor="let risque of listMandats"
-                [class.mandat-risk-created]="isMandatCree(risque)">
 
-                <div class="mandat-risk-header">
-
-                    <div class="mandat-risk-title">
-
-                        <input
-                            *ngIf="isMandatCree(risque)"
-                            class="mandat-created-check"
-                            type="checkbox"
-                            checked
-                            disabled>
-
-                        <span class="mandat-risk-cadre">
-                            {{ getCadreMandatLib(risque.cadreCcr) }}
-                        </span>
-
-                    </div>
-                </div>
-
-                <div class="mandat-risk-type">
-                    {{ risque.type }}
-                </div>
-
-                <div class="mandat-risk-detail">
-                    {{ risque.usage }}
-                    <span class="mandat-separator">|</span>
-                    {{ risque.statut }}
-                    <span class="mandat-separator">|</span>
-                    {{ risque.nbPieces }} pièces
-                </div>
-
-                <div class="mandat-risk-detail">
-                    {{ risque.codePostal }} {{ risque.ville }}
-                </div>
-
-            </div>
-
-        </div>
-
-        <label
-            class="mandat-letter-line"
-            *ngIf="lettresResiliationSelectionnees">
-
-            <input type="checkbox" checked disabled>
-            <span>Lettres de résiliation</span>
-
-        </label>
-
-    </ng-template>
-
-</div>
+}
