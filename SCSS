@@ -1,223 +1,242 @@
-.edition-mandat {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
+Réfléchi pendant 22s
+Oui, dans ce cas on fixe clairement la règle : exception métier = message.type === 'E' uniquement. Ma proposition précédente qui déduisait l’exception à partir d’une réponse « non finale » était trop large.
 
-    .mandat-common-info {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
+Donc la réponse de ta capture avec :
 
-        padding: 12px 16px;
-        margin: 0 0 16px 0;
-
-        box-sizing: border-box;
-        background: #f4eadc;
-
-        font-size: 13px;
-        line-height: 18px;
-    }
-
-    .mandat-common-text {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
-    .mandat-link {
-        border: 0;
-        background: transparent;
-        padding: 0;
-
-        cursor: pointer;
-        white-space: nowrap;
-
-        color: var(--Color-Orange, #b54825);
-        text-decoration: underline;
-
-        font-family: inherit;
-        font-size: 13px;
-        font-weight: 500;
-    }
-
-    .mandat-common-action {
-        flex: 0 0 auto;
-    }
-
-    .mandat-risk-grid {
-        width: 100%;
-
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-
-        column-gap: 24px;
-        row-gap: 14px;
-
-        box-sizing: border-box;
-    }
-
-    .mandat-risk {
-        position: relative;
-
-        width: 100%;
-        min-width: 0;
-
-        padding: 10px 12px;
-
-        border: 1px solid transparent;
-        box-sizing: border-box;
-
-        background: #fff;
-    }
-
-    .mandat-risk-created {
-        border-color: #58a36d;
-    }
-
-    .mandat-risk-header {
-        width: 100%;
-
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-
-        gap: 12px;
-
-        margin-bottom: 5px;
-    }
-
-    .mandat-risk-title {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-
-        min-width: 0;
-    }
-
-    .mandat-created-check {
-        flex: 0 0 auto;
-
-        width: 17px;
-        height: 17px;
-
-        accent-color: var(--Color-Orange, #b54825);
-    }
-
-    .mandat-risk-cadre {
-        color: var(--Color-Blue, #234b70);
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .mandat-risk-action-wrap {
-        position: relative;
-        flex: 0 0 auto;
-    }
-
-    .mandat-risk-action {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .mandat-action-arrow {
-        font-size: 12px;
-        text-decoration: none;
-    }
-
-    .mandat-risk-type {
-        margin-top: 2px;
-        margin-bottom: 3px;
-
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .mandat-risk-detail {
-        font-size: 12px;
-        line-height: 17px;
-        white-space: normal;
-    }
-
-    .mandat-separator {
-        padding: 0 3px;
-    }
-
-    .mandat-recreate-menu {
-        position: absolute;
-
-        z-index: 50;
-
-        right: 0;
-        top: calc(100% + 5px);
-
-        width: 230px;
-
-        border: 1px solid #d1d1d1;
-        background: #fff;
-
-        box-shadow: 0 3px 10px rgb(0 0 0 / 15%);
-
-        button {
-            display: block;
-
-            width: 100%;
-
-            padding: 9px 12px;
-
-            border: 0;
-            background: #fff;
-
-            text-align: left;
-
-            font-family: inherit;
-            font-size: 13px;
-
-            cursor: pointer;
-
-            &:hover {
-                background: #f5f5f5;
-            }
-        }
-    }
-
-    .mandat-letter-line {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        margin-top: 16px;
-
-        font-size: 13px;
-
-        input {
-            accent-color: var(--Color-Orange, #b54825);
-        }
-    }
-
-    .mandat-send-row {
-        width: 100%;
-
-        display: flex;
-        justify-content: flex-end;
-
-        margin-top: 18px;
-    }
+"message": {
+  "code": "PG4EMI0 -0030-",
+  "type": "I",
+  "message": "Adresse Valide; Presser 'Entrée' pour la créer ou la modifier"
 }
 
-@media screen and (max-width: 700px) {
-    .edition-mandat {
-        .mandat-risk-grid {
-            grid-template-columns: 1fr;
+n’est pas une exception et ne doit surtout pas déclencher retryApresException, markAsPristine() ni la logique parameters: {}.
+
+Remplace simplement la détection par :
+
+private isMandatException(
+    result:
+        DataOutChgtadrhabModelInterface
+        | ErrorModelInterface
+): boolean {
+
+    return (
+        !!result
+        && 'message' in result
+        && result.message?.type
+            === this.Constantes.TYPE_MESSAGE_ERREUR
+    );
+}
+
+Si votre constante correspond bien à "E". Sinon, directement :
+
+private isMandatException(
+    result:
+        DataOutChgtadrhabModelInterface
+        | ErrorModelInterface
+): boolean {
+
+    return (
+        !!result
+        && 'message' in result
+        && result.message?.type === 'E'
+    );
+}
+
+Et dans onClickCreerMandat(), je te conseille de tester l'exception avant tout le reste :
+
+next: result => {
+
+    /*
+     * =====================================
+     * 1. EXCEPTION MÉTIER OFFICIELLE
+     * message.type === 'E'
+     * =====================================
+     */
+    if (this.isMandatException(result)) {
+
+        /*
+         * Nouveau besoin :
+         * si l'exception retourne data,
+         * on met à jour le mandat affiché.
+         */
+        if (
+            'data' in result
+            && result.data
+            && typeof result.data === 'object'
+            && Object.keys(result.data).length > 0
+        ) {
+
+            this.appliquerDataExceptionMandat(
+                result.data as Partial<
+                    MandatDataModelInterface
+                >
+            );
         }
 
-        .mandat-common-info {
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 8px;
-        }
+
+        /*
+         * Le prochain clic est désormais
+         * un retry après exception.
+         */
+        this.retryApresException = true;
+
+
+        /*
+         * Les données éventuellement renvoyées
+         * par le backend deviennent l'état de
+         * référence.
+         *
+         * Aucune modification utilisateur
+         * n'a encore été faite après l'exception.
+         */
+        setTimeout(() => {
+
+            this.mandatForm
+                ?.form
+                .markAsPristine();
+
+        });
+
+
+        /*
+         * Affichage du message d'erreur
+         */
+        this.service.errorPopup(
+            result,
+            this.Constantes.AVENANT_COMPONENT,
+            'creationEnvoiMandat'
+        );
+
+
+        /*
+         * On garde la popup mandat ouverte.
+         */
+        return;
     }
+
+
+    /*
+     * =====================================
+     * 2. TRAITEMENT NORMAL
+     * type I, autres réponses worker, succès...
+     * =====================================
+     */
+
+    if (
+        this.isMandatResponseOK(result)
+    ) {
+
+        this.retryApresException = false;
+
+        this.dialogRef.close({
+            success: true,
+            mode: this.dialogData.mode,
+            riskKeys:
+                this.dialogData.riskKeys
+        });
+
+        return;
+    }
+
+
+    /*
+     * Autre réponse métier :
+     * garde ici ton traitement existant.
+     *
+     * Elle n'est PAS une exception au sens
+     * du nouveau besoin puisqu'elle n'est
+     * pas de type E.
+     */
+    this.service.errorPopup(
+        result,
+        this.Constantes.AVENANT_COMPONENT,
+        'creationEnvoiMandat'
+    );
 }
+
+Le comportement devient donc exactement :
+
+message.type = E
+        ↓
+EXCEPTION
+        ↓
+result.data existe ?
+        ↓
+oui → mise à jour de this.mandat
+        ↓
+retryApresException = true
+        ↓
+markAsPristine()
+        ↓
+popup reste ouverte
+        ↓
+prochain clic :
+    dirty = false → parameters: {}
+    dirty = true  → tous les paramètres
+Alors que :
+
+message.type = I
+➡️ aucun passage dans cette logique d'exception.
+
+Et la méthode de mise à jour des données reste valable :
+
+private appliquerDataExceptionMandat(
+    data:
+        Partial<MandatDataModelInterface>
+        | null
+        | undefined
+): void {
+
+    if (
+        !data
+        || typeof data !== 'object'
+        || Object.keys(data).length === 0
+    ) {
+        return;
+    }
+
+
+    /*
+     * Si l'exception renvoie exceptionnellement
+     * les PF4, on les conserve également.
+     */
+    this.memoriserPf4DepuisData(data);
+
+
+    /*
+     * On ne laisse pas des listes vides
+     * écraser le cache fondResil/motifResil.
+     */
+    const {
+        fondResil,
+        motifResil,
+        ...dataMandat
+    } = data;
+
+
+    /*
+     * Mise à jour des valeurs visibles
+     * dans le formulaire.
+     */
+    this.mandat = {
+        ...this.mandat,
+        ...dataMandat
+    } as MandatDataModelInterface;
+
+
+    /*
+     * Rechargement des PF4 :
+     * réponse si disponible,
+     * sinon cache.
+     */
+    this.chargerListesPf4(data);
+
+
+    this.mandat.fondResil =
+        this.fondResil;
+
+    this.mandat.motifResil =
+        this.motifResil;
+}
+
+Donc sur ce point : E = exception officielle, exclusivement. Le I de ta capture doit rester traité par le parcours normal déjà existant.
