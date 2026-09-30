@@ -1,30 +1,27 @@
-Oui. Avec le nouveau besoin, il faut surtout retirer complètement le 3ᵉ appel d’envoi du mandat et considérer que le 2ᵉ appel = création + envoi du mandat + LR, puisque le back prend maintenant cette responsabilité.
-J’ai aussi repris le problème que tu viens de trouver sur fondResil / motifResil, et le besoin récent disant que le panneau Mandat doit rester utilisable même lorsqu’un premier mandat a déjà été envoyé.
-Dans ta base v3, le bloc devient aujourd’hui inactif parce que isActionDisabled() retourne directement edition.isEnvoyer; le HTML applique ensuite la classe disabled.   De même, le mécanisme générique d’envoi des documents part encore par appelEnvoiDocument(...) et le succès met isEnvoyer = true.  
-Le nouveau parcours à obtenir
-1. Créer un mandat / Recommencer un mandat déclenche le premier appel envoiavthabmandat. Ce premier appel prépare le formulaire, retourne les données du mandat et, lorsqu'elles sont encore disponibles, les PF4 fondResil et motifResil. La popup s'ouvre. L'utilisateur modifie le formulaire. Le clic Créer le mandat fait le deuxième appel avec les données du formulaire. Ce deuxième appel crée ET envoie désormais le mandat + lettre de résiliation. Il n'y a plus de troisième appel avec parameters: {}. Si le deuxième appel réussit, les risques concernés passent en état mandat créé/envoyé, la case orange apparaît, Créer le mandat devient Gérer le mandat, la LR devient cochée et le bilan est mis à jour. Le panneau peut se replier, mais il doit rester cliquable et réouvrable. Les autres risques non créés continuent d'afficher Créer le mandat. Un mandat déjà créé peut être recommencé. En cas d'échec du deuxième appel, on ne change aucun état front. Pour une recréation échouée, l'ancien mandat reste considéré comme existant. Enfin, fondResil et motifResil doivent être mémorisés lors du premier appel qui les fournit, parce que le worker ne les renvoie pas obligatoirement lors d'une recréation.
-Les attestations, l'ACR et VBI ne doivent pas être modifiés par ce changement de contrat mandat.
-1. chgtadrhab.service.ts — ajouter le cache PF4
-Tu as déjà un fichier mandat-pf4.model.interface.ts. Utilise son vrai chemin d'import.
-Ajoute dans ChgtadrhabService :
-import {
-    MandatPf4ModelInterface
-} from '../models/mandat-pf4.model.interface';
+Oui. Avec ce nouveau besoin, il faut combiner proprement trois comportements sans casser ce qu’on a déjà fait :
+- fondResil / motifResil ne sont pas forcément renvoyés lors d’une recréation → on les met en cache.
+- après une exception métier, le prochain clic envoie {} si l’utilisateur n’a rien modifié, ou tous les champs si le formulaire est dirty.
+- si cette exception contient data, on réinjecte immédiatement ces données dans this.mandat pour rafraîchir les champs affichés.
+Il y a un détail très important dans ta dernière capture : la réponse que tu montres contient message.type: "I" et pourtant c’est une réponse intermédiaire du worker avec des données à reprendre. Donc ne code pas “exception = type E uniquement”. Il faut te baser sur ta règle de fin de transaction actuelle : si ce n’est pas la réponse finale OK, c’est une réponse métier intermédiaire/exception à traiter.
+1. chgtadrhab.service.ts — cache des listes PF4
+Le cache doit être dans le service et non dans la popup, sinon il disparaît lorsque tu fermes la popup puis fais « Recommencer le mandat ».
+J’utilise MandatPf4ModelInterface ci-dessous car tu as déjà le fichier mandat-pf4.model.interface.ts. Adapte seulement le chemin de l’import si nécessaire.
+import { MandatPf4ModelInterface } from '../models/mandat-pf4.model.interface';
 
-Puis dans la classe :
 interface MandatPf4Cache {
     fondResil: MandatPf4ModelInterface[];
     motifResil: MandatPf4ModelInterface[];
 }
 
-Si TypeScript n'accepte pas l'interface au milieu de ton fichier, mets-la avant @Injectable.
-Dans ChgtadrhabService :
+Dans ChgtadrhabService ajoute :
 private readonly mandatPf4Cache:
     Map<string, MandatPf4Cache> =
     new Map<string, MandatPf4Cache>();
 
 
-private getMandatPf4CacheKey(cadreCcr: string): string {
+private getMandatPf4CacheKey(
+    cadreCcr: string
+): string {
 
     const contexte = this.getCommunContexte();
 
@@ -42,34 +39,51 @@ public memoriserMandatPf4(
     motifResil?: MandatPf4ModelInterface[]
 ): void {
 
-    const key = this.getMandatPf4CacheKey(cadreCcr);
+    const key =
+        this.getMandatPf4CacheKey(cadreCcr);
 
-    const cacheExistant: MandatPf4Cache =
+    const cache:
+        MandatPf4Cache =
         this.mandatPf4Cache.get(key) ?? {
             fondResil: [],
             motifResil: []
         };
 
+
     /*
-     * IMPORTANT :
-     * une liste vide lors d'une recréation ne doit PAS
-     * écraser la liste récupérée au premier appel.
+     * Très important :
+     *
+     * une liste [] renvoyée pendant une recréation
+     * ne doit PAS écraser la liste PF4 mémorisée
+     * lors du premier appel.
      */
-    if (Array.isArray(fondResil) && fondResil.length > 0) {
-        cacheExistant.fondResil = fondResil.map(item => ({
-            ...item
-        }));
+    if (
+        Array.isArray(fondResil)
+        && fondResil.length > 0
+    ) {
+
+        cache.fondResil =
+            fondResil.map(item => ({
+                ...item
+            }));
     }
 
-    if (Array.isArray(motifResil) && motifResil.length > 0) {
-        cacheExistant.motifResil = motifResil.map(item => ({
-            ...item
-        }));
+
+    if (
+        Array.isArray(motifResil)
+        && motifResil.length > 0
+    ) {
+
+        cache.motifResil =
+            motifResil.map(item => ({
+                ...item
+            }));
     }
+
 
     this.mandatPf4Cache.set(
         key,
-        cacheExistant
+        cache
     );
 }
 
@@ -78,10 +92,13 @@ public getMandatFondResil(
     cadreCcr: string
 ): MandatPf4ModelInterface[] {
 
-    const key = this.getMandatPf4CacheKey(cadreCcr);
+    const key =
+        this.getMandatPf4CacheKey(cadreCcr);
 
     return (
-        this.mandatPf4Cache.get(key)?.fondResil ?? []
+        this.mandatPf4Cache.get(key)
+            ?.fondResil
+        ?? []
     ).map(item => ({
         ...item
     }));
@@ -92,33 +109,141 @@ public getMandatMotifResil(
     cadreCcr: string
 ): MandatPf4ModelInterface[] {
 
-    const key = this.getMandatPf4CacheKey(cadreCcr);
+    const key =
+        this.getMandatPf4CacheKey(cadreCcr);
 
     return (
-        this.mandatPf4Cache.get(key)?.motifResil ?? []
+        this.mandatPf4Cache.get(key)
+            ?.motifResil
+        ?? []
     ).map(item => ({
         ...item
     }));
 }
 
+Ici, si le premier appel donne les PF4, ils sont sauvegardés. Si « Recommencer le mandat » retourne ensuite seulement les données du mandat sans les listes, tu récupères les listes précédentes.
+2. Donne explicitement cadreCcr à la popup
+Dans ton ChgtadrhabAvenantComponent, au moment d’ouvrir PopupMandatResiliationComponent, je te conseille de passer le cadre.
+Par exemple dans ouvrirMandat(...) :
+const cadreCcr: string =
+    risques.length > 0
+        ? risques[0].cadreCcr ?? ''
+        : '';
 
-public clearMandatPf4Cache(): void {
-    this.mandatPf4Cache.clear();
+const dialogRef =
+    this.dialog.open(
+        PopupMandatResiliationComponent,
+        {
+            width: '...',
+            disableClose: true,
+
+            data: {
+                result,
+                mode,
+                riskKeys:
+                    risques.map(
+                        risque =>
+                            Number(risque.cle)
+                    ),
+                cadreCcr
+            }
+        }
+    );
+
+Et ton interface de données popup :
+export interface PopupMandatResiliationData {
+    result: DataOutChgtadrhabModelInterface;
+    mode: 'unitaire' | 'commun';
+    riskKeys: number[];
+    cadreCcr: string;
 }
 
-Le fait de mettre dossierId + resourceId + cadreCcr dans la clé évite de récupérer accidentellement les PF4 d'un autre dossier ou d'un autre cadre.
-2. popup-mandat-resiliation.component.ts
-Le bug actuel est ici :
-this.fondResil = Array.isArray(this.mandat.fondResil)
-    ? this.mandat.fondResil
-    : [];
+Cela évite de dépendre du fait que cadreCcr soit ou non renvoyé dans chaque réponse worker.
+3. popup-mandat-resiliation.component.html
+Pour utiliser dirty, il te faut ton NgForm.
+Au niveau du formulaire :
+<form
+    #mandatForm="ngForm"
+    class="mandat-resiliation-popup"
+    novalidate>
 
-this.motifResil = Array.isArray(this.mandat.motifResil)
-    ? this.mandat.motifResil
-    : [];
+    <!-- ton HTML existant -->
 
-À supprimer.
-Remplace ton ngOnInit() par ceci
+</form>
+
+Tous les champs modifiables avec [(ngModel)] doivent avoir un name.
+Exemple :
+<input
+    id="mandatVoie"
+    name="mandatVoie"
+    type="text"
+    [(ngModel)]="mandat.voie">
+
+<input
+    id="mandatLocalite"
+    name="mandatLocalite"
+    type="text"
+    [(ngModel)]="mandat.localite">
+
+<select
+    id="mandatFondement"
+    name="mandatFondement"
+    [(ngModel)]="mandat.fondementResiliation">
+
+    <option
+        *ngFor="let fondement of fondResil"
+        [value]="fondement.cle">
+
+        {{ fondement.libelle }}
+
+    </option>
+
+</select>
+
+<select
+    id="mandatMotif"
+    name="mandatMotif"
+    [(ngModel)]="mandat.motif">
+
+    <option
+        *ngFor="let motif of motifResil"
+        [value]="motif.cle">
+
+        {{ motif.libelle }}
+
+    </option>
+
+</select>
+
+Les champs Nom / Prénom qui sont disabled peuvent rester disabled.
+4. popup-mandat-resiliation.component.ts — imports
+Ajoute :
+import {
+    ViewChild
+} from '@angular/core';
+
+import {
+    NgForm
+} from '@angular/forms';
+
+import {
+    finalize
+} from 'rxjs/operators';
+
+Puis dans la classe :
+@ViewChild('mandatForm')
+private mandatForm!: NgForm;
+
+
+/**
+ * true uniquement après une réponse
+ * intermédiaire / exception du worker.
+ */
+private retryApresException:
+    boolean = false;
+
+5. Remplace ton ngOnInit() actuel
+Tu as aujourd’hui quelque chose comme :
 public ngOnInit(): void {
 
     const data =
@@ -129,234 +254,265 @@ public ngOnInit(): void {
         ...data
     };
 
-    const cadreCcr: string =
-        this.mandat.cadreCcr ?? '';
+    this.fondResil =
+        Array.isArray(
+            this.mandat.fondResil
+        )
+            ? this.mandat.fondResil
+            : [];
+
+    this.motifResil =
+        Array.isArray(
+            this.mandat.motifResil
+        )
+            ? this.mandat.motifResil
+            : [];
+}
+
+Remplace complètement par :
+public ngOnInit(): void {
+
+    const data =
+        this.dialogData.result.data
+        as MandatDataModelInterface;
+
+    this.mandat = {
+        ...data
+    };
+
 
     /*
-     * HAMON :
-     * le bloc résiliation n'est pas affiché.
+     * Premier appel :
      *
-     * Donc inutile de charger fondResil / motifResil.
+     * si les listes PF4 sont présentes,
+     * on les mémorise.
      */
-    if (!this.afficherBlocResiliation()) {
+    this.memoriserPf4DepuisData(
+        data
+    );
 
-        this.fondResil = [];
-        this.motifResil = [];
-
-        return;
-    }
 
     /*
-     * Si le backend renvoie les PF4 :
-     * on les conserve.
+     * On résout ensuite les listes :
      *
-     * Premier appel worker normalement.
+     * réponse courante si présentes,
+     * sinon cache du premier appel.
      */
+    this.chargerListesPf4(
+        data
+    );
+}
+
+Ajoute les deux méthodes suivantes.
+private memoriserPf4DepuisData(
+    data: Partial<MandatDataModelInterface>
+): void {
+
     this.service.memoriserMandatPf4(
-        cadreCcr,
+        this.getCadreCcrMandat(),
+
         Array.isArray(data.fondResil)
             ? data.fondResil
             : undefined,
+
         Array.isArray(data.motifResil)
             ? data.motifResil
             : undefined
     );
+}
+
+
+private chargerListesPf4(
+    data?: Partial<MandatDataModelInterface>
+): void {
+
+    const cadreCcr =
+        this.getCadreCcrMandat();
+
 
     /*
-     * Premier passage :
-     * utilisation de la réponse backend.
-     *
-     * Recréation :
-     * si le backend ne renvoie plus les PF4,
-     * récupération du cache.
+     * fondResil
      */
-    this.fondResil =
-        Array.isArray(data.fondResil)
-        && data.fondResil.length > 0
+    if (
+        Array.isArray(data?.fondResil)
+        && data!.fondResil!.length > 0
+    ) {
 
-            ? data.fondResil.map(item => ({
-                ...item
-            }))
-
-            : this.service.getMandatFondResil(
-                cadreCcr
+        this.fondResil =
+            data!.fondResil!.map(
+                item => ({
+                    ...item
+                })
             );
 
+    } else {
 
-    this.motifResil =
-        Array.isArray(data.motifResil)
-        && data.motifResil.length > 0
+        this.fondResil =
+            this.service
+                .getMandatFondResil(
+                    cadreCcr
+                );
+    }
 
-            ? data.motifResil.map(item => ({
-                ...item
-            }))
 
-            : this.service.getMandatMotifResil(
-                cadreCcr
+    /*
+     * motifResil
+     */
+    if (
+        Array.isArray(data?.motifResil)
+        && data!.motifResil!.length > 0
+    ) {
+
+        this.motifResil =
+            data!.motifResil!.map(
+                item => ({
+                    ...item
+                })
             );
+
+    } else {
+
+        this.motifResil =
+            this.service
+                .getMandatMotifResil(
+                    cadreCcr
+                );
+    }
 }
 
-Cela corrige ton bug :
-première création
-→ PF4 reçus
-→ cache
+Et :
+private getCadreCcrMandat(): string {
 
-recréation
-→ PF4 absents
-→ récupération du cache
-
-Et surtout on ne fait plus :
-: [];
-
-automatiquement lorsqu'ils ne sont pas renvoyés.
-3. Le gros changement : le bouton Créer le mandat
-Avant, tu avais conceptuellement :
-appel 1
-→ ouverture formulaire
-
-appel 2
-→ modification/création
-
-appel 3
-→ parameters: {}
-→ envoi mandat + LR
-
-Maintenant il faut :
-appel 1
-→ ouverture formulaire
-
-appel 2
-→ création + envoi mandat + LR
-→ terminé
-
-Donc le 3ᵉ appel doit disparaître complètement.
-Dans PopupMandatResiliationComponent, importe si nécessaire :
-import { finalize } from 'rxjs';
-
-Je te conseille que les données d'ouverture de la popup contiennent aussi :
-export type MandatMode =
-    'unitaire'
-    | 'commun';
-
-
-export interface PopupMandatResiliationData {
-
-    result: DataOutChgtadrhabModelInterface;
-
-    mode: MandatMode;
-
-    riskKeys: number[];
+    return this.mandat?.cadreCcr
+        ?? this.dialogData.cadreCcr
+        ?? '';
 }
 
-
-export interface PopupMandatResiliationResult {
-
-    success: boolean;
-
-    mode: MandatMode;
-
-    riskKeys: number[];
+6. Nouvelle méthode importante : appliquer result.data en cas d’exception
+C’est la nouvelle demande métier.
+Dans ton exemple, le backend te renvoie :
+{
+    "data": {
+        "voie": "49 RUE DE LA GARE",
+        "fondementResiliation": "ECH",
+        "localite": "PLAISIR CEDEX",
+        "numContrat": "AX01241",
+        "codePostal": "78374",
+        "nomAssureur": "AXA FRANCE IARD",
+        "distribution": "",
+        "nom": "ETIENNE",
+        "lieuDit": "",
+        "dateEvt": "",
+        "designation": "",
+        "motif": "",
+        "prenom": "SHUI",
+        "validation": "O",
+        "civilite": "M"
+    }
 }
 
-Puis ton injection :
-constructor(
-    @Inject(MAT_DIALOG_DATA)
-    public dialogData: PopupMandatResiliationData,
+Donc après cette réponse, le formulaire doit afficher par exemple :
+localite = PLAISIR CEDEX
+codePostal = 78374
+validation = O
+fondementResiliation = ECH
+...
 
-    private readonly dialogRef:
-        MatDialogRef<PopupMandatResiliationComponent>,
-
-    public readonly service: ChgtadrhabService,
-
-    private readonly spinner: NgxSpinnerService,
-
-    private readonly dialogCalendrier: MatDialog
-) {
-}
-
-Adapte uniquement les injections déjà présentes dans ton fichier.
-4. Méthode complète appelée par « Créer le mandat »
-Le point central est celui-ci.
-public onClickCreerMandat(): void {
+Ajoute :
+private appliquerDataExceptionMandat(
+    data:
+        Partial<MandatDataModelInterface>
+        | undefined
+        | null
+): void {
 
     if (
-        this.loading
-        || !this.isFormulaireValide()
+        !data
+        || typeof data !== 'object'
+        || Object.keys(data).length === 0
     ) {
         return;
     }
 
-    this.loading = true;
-    this.spinner.show();
-
-    const dataIn:
-        DataInModelInterface =
-        this.getDataCreationEtEnvoiMandat();
 
     /*
-     * NOUVEAU CONTRAT BACK :
-     *
-     * ce deuxième appel :
-     * - valide les informations
-     * - crée le mandat
-     * - envoie le mandat
-     * - envoie la LR
-     *
-     * PAS DE TROISIÈME APPEL.
+     * Si exceptionnellement cette réponse
+     * contient aussi les PF4,
+     * on les mémorise.
      */
-    this.service
-        .envoiAvenantMandat(dataIn)
-        .pipe(
-            finalize(() => {
+    this.memoriserPf4DepuisData(
+        data
+    );
 
-                this.loading = false;
-                this.spinner.hide();
-            })
-        )
-        .subscribe({
 
-            next: result => {
+    /*
+     * ATTENTION :
+     *
+     * on ne doit pas laisser
+     * fondResil: []
+     * ou motifResil: []
+     * écraser les listes mémorisées.
+     */
+    const {
+        fondResil,
+        motifResil,
+        ...dataMandat
+    } = data;
 
-                if (
-                    !this.isMandatResponseOK(
-                        result
-                    )
-                ) {
 
-                    this.service.errorPopup(
-                        result,
-                        this.Constantes.AVENANT_COMPONENT,
-                        'creationEtEnvoiMandat'
-                    );
+    /*
+     * On MERGE et on ne remplace pas
+     * entièrement le mandat.
+     *
+     * Ainsi les propriétés absentes
+     * dans la réponse restent présentes.
+     *
+     * Les chaînes vides venant du backend
+     * sont bien appliquées.
+     */
+    this.mandat = {
 
-                    return;
-                }
+        ...this.mandat,
 
-                /*
-                 * On ferme uniquement après
-                 * création + envoi réussis.
-                 */
-                this.dialogRef.close({
-                    success: true,
-                    mode: this.dialogData.mode,
-                    riskKeys:
-                        this.dialogData.riskKeys
-                } as PopupMandatResiliationResult);
-            },
+        ...dataMandat
 
-            error: error => {
+    } as MandatDataModelInterface;
 
-                this.service.errorPopup(
-                    error,
-                    this.Constantes.AVENANT_COMPONENT,
-                    'creationEtEnvoiMandat'
-                );
-            }
-        });
+
+    /*
+     * Réapplique ensuite les listes PF4
+     * correctes.
+     */
+    this.chargerListesPf4(
+        data
+    );
+
+
+    /*
+     * Si fondResil / motifResil font partie
+     * également de MandatDataModelInterface,
+     * on peut garder le modèle cohérent.
+     */
+    this.mandat.fondResil =
+        this.fondResil;
+
+    this.mandat.motifResil =
+        this.motifResil;
 }
 
-Et le contrôle de succès :
-private isMandatResponseOK(
+Grâce au :
+this.mandat = {
+    ...this.mandat,
+    ...dataMandat
+};
+
+Angular rafraîchira automatiquement les champs liés avec :
+[(ngModel)]="mandat.localite"
+
+etc.
+7. Détecter si la réponse contient réellement data
+Ajoute :
+private hasMandatData(
     result:
         DataOutChgtadrhabModelInterface
         | ErrorModelInterface
@@ -366,95 +522,205 @@ private isMandatResponseOK(
         return false;
     }
 
-    if (!('message' in result)) {
+    if (!('data' in result)) {
         return false;
     }
 
-    /*
-     * Le métier nous avait indiqué :
-     * si ce n'est pas une exception / erreur,
-     * on considère l'opération OK.
-     *
-     * Donc ne bloque pas uniquement parce que
-     * le message est de type information.
-     */
-    return result.message?.type
-        !== this.Constantes.TYPE_MESSAGE_ERREUR;
+    if (
+        !result.data
+        || typeof result.data !== 'object'
+    ) {
+        return false;
+    }
+
+    return Object.keys(
+        result.data
+    ).length > 0;
 }
 
-5. Payload du deuxième appel
-Tu dois conserver le même payload que celui que tu envoies actuellement au deuxième appel.
-Par exemple :
-private getDataCreationEtEnvoiMandat():
-    DataInModelInterface {
+8. Ne teste surtout pas seulement message.type === 'E'
+Ta dernière capture montre justement :
+"message": {
+    "code": "PG4EMI0 -0030-",
+    "type": "I",
+    "message": "Adresse Valide; Presser 'Entrée' pour la créer ou la modifier"
+}
+
+Donc ton worker peut être non terminé tout en retournant type = I.
+Il faut avoir une notion de :
+transaction finale OK
+
+versus :
+réponse métier intermédiaire / exception
+
+Tu avais déjà une méthode comme :
+isMandatResponseOK(...)
+
+Garde-la comme référence.
+Puis ajoute :
+private isMandatException(
+    result:
+        DataOutChgtadrhabModelInterface
+        | ErrorModelInterface
+): result is DataOutChgtadrhabModelInterface {
+
+    /*
+     * Ce qui nous intéresse :
+     *
+     * réponse métier du worker,
+     * mais PAS réponse finale de succès.
+     *
+     * Ne pas réduire ce test à type === 'E'.
+     */
+    return (
+        !!result
+        && 'message' in result
+        && 'data' in result
+        && !this.isMandatResponseOK(
+            result
+        )
+    );
+}
+
+Si votre back fournit demain un flag ou un code officiel indiquant exactement « exception worker », tu remplaceras seulement cette méthode.
+9. Construction des paramètres complets
+Garde ta construction existante si elle marche. Je te conseille simplement de la centraliser.
+private getParametresMandatComplets():
+    any {
 
     const parameters: any = {
 
         civilite:
-            this.mandat.civilite,
+            this.mandat.civilite ?? '',
 
         nom:
-            this.mandat.nom,
+            this.mandat.nom ?? '',
 
         prenom:
-            this.mandat.prenom,
+            this.mandat.prenom ?? '',
 
         nomAssureur:
-            this.mandat.nomAssureur,
+            this.mandat.nomAssureur ?? '',
 
         designation:
-            this.mandat.designation,
+            this.mandat.designation ?? '',
 
         distribution:
-            this.mandat.distribution,
+            this.mandat.distribution ?? '',
 
         voie:
-            this.mandat.voie,
+            this.mandat.voie ?? '',
 
         lieuDit:
-            this.mandat.lieuDit,
+            this.mandat.lieuDit ?? '',
 
         localite:
-            this.mandat.localite,
+            this.mandat.localite ?? '',
 
         codePostal:
-            this.mandat.codePostal,
+            this.mandat.codePostal ?? '',
 
         validation:
-            this.mandat.validation,
+            this.mandat.validation ?? '',
 
         numContrat:
-            this.mandat.numContrat
+            this.mandat.numContrat ?? ''
     };
 
 
     /*
-     * HAMON :
-     * ces champs n'apparaissent pas
-     * et ne doivent donc pas être envoyés.
+     * Hors Hamon seulement.
      */
-    if (this.afficherBlocResiliation()) {
+    if (
+        this.afficherBlocResiliation()
+    ) {
 
         parameters.fondementResiliation =
-            this.mandat.fondementResiliation;
+            this.mandat
+                .fondementResiliation
+            ?? '';
 
         parameters.motif =
-            this.mandat.motif;
+            this.mandat.motif
+            ?? '';
 
-        if (this.mandat.dateEvt) {
-
-            /*
-             * Garde ici la conversion date
-             * déjà utilisée dans ton code actuel
-             * si le worker attend AAAA-MM-JJ.
-             */
-            parameters.dateEvt =
-                this.mandat.dateEvt;
-        }
+        parameters.dateEvt =
+            this.getDateEvtPourBack();
     }
 
 
-    return {
+    return parameters;
+}
+
+Garde dans :
+getDateEvtPourBack()
+
+la conversion de date que tu utilises déjà actuellement.
+10. La règle dirty
+Ajoute :
+private doitEnvoyerTousLesParametres():
+    boolean {
+
+    /*
+     * Appel normal :
+     * envoi complet.
+     */
+    if (
+        !this.retryApresException
+    ) {
+        return true;
+    }
+
+
+    /*
+     * Après exception :
+     *
+     * dirty = true
+     * => utilisateur a modifié quelque chose
+     * => tous les champs
+     *
+     * dirty = false
+     * => aucune modification utilisateur
+     * => parameters: {}
+     */
+    return this.mandatForm
+        ?.dirty === true;
+}
+
+11. Maintenant remplace ta méthode Créer le mandat
+Voici la version combinant tous les nouveaux besoins.
+public onClickCreerMandat(): void {
+
+    if (
+        this.loading
+        || !this.isFormulaireValide()
+    ) {
+        return;
+    }
+
+
+    /*
+     * Premier appel :
+     * toujours tous les paramètres.
+     *
+     * Après exception :
+     * dirty ? tous : {}
+     */
+    const envoyerTousLesParametres:
+        boolean =
+        this.doitEnvoyerTousLesParametres();
+
+
+    const parameters: any =
+        envoyerTousLesParametres
+
+            ? this.getParametresMandatComplets()
+
+            : {};
+
+
+    const dataIn:
+        DataInModelInterface = {
 
         idDossier:
             this.service
@@ -469,773 +735,367 @@ private getDataCreationEtEnvoiMandat():
         parameters,
 
         screenkey:
-            this.Constantes.SCREEN_GENERIC
+            'generic'
     };
-}
 
-Important : ne remplace pas une conversion de date qui marche déjà chez toi. Sur tes traces réseau précédentes, le backend recevait notamment dateEvt au format worker. Si ton code actuel transforme JJ/MM/AAAA en AAAA-MM-JJ, garde cette transformation.
-6. Supprimer le troisième appel
-Tu m'avais montré une méthode du genre :
-private gereEnvoiMandatDocuments(): void {
-    ...
-}
 
-Elle servait à faire l'ancien appel final d'envoi.
-Supprime son appel.
-Si elle n'est utilisée nulle part ailleurs, supprime également toute la méthode.
-Il ne doit plus rester quelque chose comme :
-this.service.envoiAvenantMandat({
-    ...
-    parameters: {}
-})
+    this.loading = true;
+    this.spinner.show();
 
-après le succès du deuxième appel.
-C'est précisément ce qui ramène le parcours de 3 appels à 2 appels.
-7. chgtadrhab-avenant.component.ts — le panneau mandat ne doit plus être désactivé
-Remplace :
-public isActionDisabled(code: string) {
-    return this.getEditionFromList(code)!.isEnvoyer;
-}
-
-par :
-public isActionDisabled(
-    code: string
-): boolean {
 
     /*
-     * Le bloc mandat reste toujours accessible :
+     * NOUVEAU CONTRAT :
      *
-     * - création d'un autre mandat
-     * - recréation unitaire
-     * - recréation commune
-     */
-    if (
-        code ===
-        this.Constantes
-            .HAB_EDITION_MANDAT_RESILIATION
-    ) {
-        return false;
-    }
-
-    /*
-     * Comportement historique conservé
-     * pour les autres documents.
-     */
-    return this.getEditionFromList(code)
-        ?.isEnvoyer === true;
-}
-
-C'est une modification essentielle.
-Tu peux donc continuer à faire :
-edition.isEnvoyer = true;
-
-pour mémoriser qu'au moins un mandat a été envoyé et afficher le bilan.
-Mais ça ne grise plus le panneau mandat.
-8. Sécuriser l'ancien envoi générique
-Puisque l'envoi est maintenant intégré à la création, le mandat ne doit plus passer par gereEnvoiDocument().
-Remplace le début de cette méthode par :
-private gereEnvoiDocument(
-    code: string
-): void {
-
-    /*
-     * Sécurité :
-     * le mandat n'utilise plus
-     * l'envoi générique des documents.
+     * ce deuxième appel réalise maintenant :
+     * - création mandat
+     * - envoi mandat
+     * - envoi LR
      *
-     * L'envoi est effectué par le deuxième
-     * appel envoiAvenantMandat.
+     * Il n'y a plus de 3e appel.
      */
-    if (
-        code ===
-        this.Constantes
-            .HAB_EDITION_MANDAT_RESILIATION
-    ) {
-        this.spinner.hide();
-        return;
-    }
-
-    const url =
-        this.Converter.getTranscoLibelle(
-            this.Constantes
-                .TRANSCO_HAB_EDITION_DOCUMENT_URL,
-            code,
-            this.Constantes.STRING_VIDE
-        );
-
-    if (
-        url ===
-        this.Constantes.STRING_VIDE
-    ) {
-        this.spinner.hide();
-        return;
-    }
-
     this.service
-        .appelEnvoiDocument(
-            url,
-            this.getDataEnvoiDocument(code)
+        .envoiAvenantMandat(
+            dataIn
         )
-        .subscribe(result => {
+        .pipe(
+            finalize(() => {
 
-            if (
-                this.isEnvoiDocumentOK(
-                    code,
-                    result
-                )
-            ) {
+                this.loading = false;
+                this.spinner.hide();
+            })
+        )
+        .subscribe({
 
-                this.gereEnvoiDocumentOK(
-                    code,
-                    result
-                        as DataOutChgtadrhabModelInterface
+            next: result => {
+
+                /*
+                 * =====================================
+                 * 1. SUCCÈS FINAL
+                 * =====================================
+                 */
+                if (
+                    this.isMandatResponseOK(
+                        result
+                    )
+                ) {
+
+                    this.retryApresException =
+                        false;
+
+
+                    /*
+                     * Seulement ici :
+                     *
+                     * le parent pourra considérer
+                     * mandat créé + envoyé.
+                     */
+                    this.dialogRef.close({
+
+                        success: true,
+
+                        mode:
+                            this.dialogData.mode,
+
+                        riskKeys:
+                            this.dialogData.riskKeys
+
+                    });
+
+                    return;
+                }
+
+
+                /*
+                 * =====================================
+                 * 2. EXCEPTION / RÉPONSE INTERMÉDIAIRE
+                 * =====================================
+                 */
+                if (
+                    this.isMandatException(
+                        result
+                    )
+                ) {
+
+                    /*
+                     * Nouveau besoin :
+                     *
+                     * si data existe,
+                     * on met à jour le mandat
+                     * et donc l'affichage.
+                     */
+                    if (
+                        this.hasMandatData(
+                            result
+                        )
+                    ) {
+
+                        this.appliquerDataExceptionMandat(
+                            result.data
+                                as Partial<
+                                    MandatDataModelInterface
+                                >
+                        );
+                    }
+
+
+                    /*
+                     * On entre maintenant
+                     * dans le mode retry.
+                     */
+                    this.retryApresException =
+                        true;
+
+
+                    /*
+                     * CRUCIAL :
+                     *
+                     * les valeurs éventuellement
+                     * renvoyées par le back deviennent
+                     * le nouvel état de référence.
+                     *
+                     * Elles ne sont PAS considérées
+                     * comme une modification utilisateur.
+                     */
+                    setTimeout(() => {
+
+                        this.mandatForm
+                            ?.form
+                            .markAsPristine();
+
+                    });
+
+
+                    /*
+                     * On affiche le message backend
+                     * avec ton mécanisme actuel.
+                     */
+                    this.service.errorPopup(
+                        result,
+                        this.Constantes
+                            .AVENANT_COMPONENT,
+                        'creationEnvoiMandat'
+                    );
+
+
+                    /*
+                     * IMPORTANT :
+                     *
+                     * NE PAS fermer la popup.
+                     *
+                     * NE PAS marquer le mandat créé.
+                     *
+                     * NE PAS afficher la case orange.
+                     */
+                    return;
+                }
+
+
+                /*
+                 * =====================================
+                 * 3. AUTRE KO MÉTIER
+                 * =====================================
+                 */
+                this.retryApresException =
+                    false;
+
+
+                this.service.errorPopup(
+                    result,
+                    this.Constantes
+                        .AVENANT_COMPONENT,
+                    'creationEnvoiMandat'
                 );
+            },
 
-            } else {
 
-                this.gereEnvoiDocumentKO(
-                    result
+            /*
+             * =========================================
+             * 4. ERREUR HTTP / TECHNIQUE
+             * =========================================
+             */
+            error: error => {
+
+                /*
+                 * Ce n'est pas l'exception
+                 * métier demandée.
+                 *
+                 * Au prochain clic,
+                 * on recommence avec tous
+                 * les paramètres.
+                 */
+                this.retryApresException =
+                    false;
+
+
+                this.service.errorPopup(
+                    error,
+                    this.Constantes
+                        .AVENANT_COMPONENT,
+                    'creationEnvoiMandat'
                 );
             }
         });
 }
 
-Ainsi, même si quelqu'un remet accidentellement le bouton dans le HTML, tu ne feras pas un deuxième envoi.
-9. Même sécurité dans isEnvoiDocumentDisabled()
-Remplace par :
-public isEnvoiDocumentDisabled(
-    code: string
-): boolean {
+12. Pourquoi markAsPristine() doit venir APRÈS la mise à jour de data
+L’ordre est essentiel.
+Il faut :
+exception reçue
+       ↓
+result.data existe
+       ↓
+mettre à jour this.mandat
+       ↓
+mettre à jour les listes éventuelles
+       ↓
+rafraîchissement écran
+       ↓
+markAsPristine()
+       ↓
+attendre une vraie action utilisateur
 
-    /*
-     * Plus de bouton "Envoyer les documents"
-     * pour le mandat.
-     */
-    if (
-        code ===
-        this.Constantes
-            .HAB_EDITION_MANDAT_RESILIATION
-    ) {
-        return true;
-    }
+Pas :
+markAsPristine()
+↓
+mettre à jour mandat
 
-    const edition =
-        this.getEditionFromList(code);
+Sinon tes changements programmatiques risqueraient d’interférer avec ta détection.
+Après la réponse de ta capture, par exemple, ton modèle devient :
+this.mandat.voie =
+    '49 RUE DE LA GARE';
 
-    return !(
-        !edition!.isEnvoyer
+this.mandat.localite =
+    'PLAISIR CEDEX';
 
-        && edition!.canalEnvoi
-            !== this.Constantes.STRING_VIDE
+this.mandat.codePostal =
+    '78374';
 
-        && (
-            code !==
-            this.Constantes
-                .HAB_EDITION_ATTESTATION_SCOLAIRE
+this.mandat.validation =
+    'O';
 
-            || this.listEnfants
-                .some(e => e.selection)
-        )
-
-        && (
-            code !==
-            this.Constantes
-                .HAB_EDITION_ATTESTATION_HABITATION
-
-            || this.listHabitations
-                .some(h => h.selection)
-        )
-
-        && (
-            code !==
-            this.Constantes
-                .HAB_EDITION_ATTESTATION_RC_LOCATIVE
-
-            || this.listLocations
-                .some(l => l.selection)
-        )
-
-        && (
-            code !==
-            this.Constantes
-                .HAB_EDITION_ACR_SUPPRESSION_HABITATION
-
-            || this.listAcrSuppressionHab
-                .some(h => h.selection)
-        )
-    );
-}
-
-Les attestations et l'ACR gardent donc exactement leur comportement actuel.
-10. Après fermeture de la popup : mettre à jour le front
-Dans ta méthode actuelle ouvrirMandat(...), tu fais le premier appel puis tu ouvres PopupMandatResiliationComponent.
-Le afterClosed() doit maintenant ressembler à cela :
-dialogRef
-    .afterClosed()
-    .subscribe(
-        (
-            retour:
-                PopupMandatResiliationResult
-                | undefined
-        ) => {
-
-            if (
-                !retour
-                || !retour.success
-            ) {
-                return;
-            }
-
-            /*
-             * IMPORTANT :
-             *
-             * appelle ici ta logique ACTUELLE
-             * qui alimente :
-             *
-             * - isMandatCree(risque)
-             * - etat.riskKeys
-             * - mandat commun/unitaire
-             *
-             * Cette logique fonctionnait déjà
-             * dans ton dernier code.
-             */
-            this.marquerMandatCree(
-                retour.riskKeys,
-                retour.mode
-            );
-
-            /*
-             * Plus besoin d'appeler :
-             *
-             * gereEnvoiMandatDocuments()
-             *
-             * puisque le back vient déjà
-             * de créer + envoyer.
-             */
-            this.gereMandatCreeEtEnvoyeOK();
-        }
-    );
-
-Et ajoute/remplace :
-private gereMandatCreeEtEnvoyeOK():
-    void {
-
-    const edition =
-        this.getEditionFromList(
-            this.Constantes
-                .HAB_EDITION_MANDAT_RESILIATION
-        );
-
-    if (!edition) {
-        return;
-    }
-
-    /*
-     * Cela permet toujours d'afficher
-     * le bilan / coche verte du récap.
-     *
-     * MAIS isActionDisabled() retourne false
-     * pour le mandat, donc le bloc reste
-     * accessible.
-     */
-    edition.isEnvoyer = true;
-
-    /*
-     * Tu peux le replier après création.
-     * L'utilisateur pourra le rouvrir.
-     *
-     * Cela conserve également ton fonctionnement
-     * actuel du bouton Terminer.
-     */
-    edition.isVoirPlus = true;
-
-    /*
-     * Tu avais déjà cette méthode
-     * dans ton dernier code.
-     */
-    edition.bilanEnvoi =
-        this.getBilanEnvoiMandat();
-
-    this.mandatMenuCle = null;
-
-    this.spinner.hide();
-}
-
-Donc l'ancien :
-gereEnvoiMandatDocuments();
-
-disparaît.
-11. Très important : ne change pas l'état avant le succès back
-Pour une recréation, ne fais surtout pas :
-this.supprimerEtatMandat(risque);
-
-avant le deuxième appel.
-Exemple :
-mandat existant
-→ Recommencer le mandat
-→ deuxième appel KO
-
-Le mandat précédent existe toujours.
-Donc l'état orange doit rester.
-La bonne règle est :
-avant appel :
-conserver état actuel
-
-appel OK :
-remplacer / mettre à jour état
-
-appel KO :
-ne rien modifier
-
-12. listMandat : conserve la correction précédente
-Pour le cas où le backend retourne :
-"listMandat": []
-
-mais où le front construit le mandat unique depuis le contexte, ton isLoadDataOK() ne doit pas demander length > 0.
-Il faut garder :
-case this.Constantes
-    .HAB_EDITION_MANDAT_RESILIATION:
-
-    return 'listMandat' in result.data
-        && Array.isArray(
-            result.data.listMandat
-        );
+this.mandat.fondementResiliation =
+    'ECH';
 
 Puis :
-case this.Constantes
-    .HAB_EDITION_MANDAT_RESILIATION:
+this.mandatForm.form.markAsPristine();
 
-    if (
-        'listMandat' in result.data
-        && Array.isArray(
-            result.data.listMandat
-        )
-        && result.data.listMandat.length > 0
-    ) {
-
-        this.listMandats =
-            (
-                result.data.listMandat
-                as MandatRisqueModelInterface[]
-            )
-            .map(risque => ({
-                ...risque,
-                selection: false
-            }));
-
-        return;
-    }
-
-    /*
-     * Cas mandat construit côté front.
-     */
-    this.initialiserMandatUniqueDepuisContexte();
-
-    break;
-
-Ça, il ne faut pas le casser avec le nouveau besoin.
-13. Le HTML du mandat : ne plus utiliser else mandatEnvoye
-Le bloc mandat doit être affiché même si :
-edition.isEnvoyer === true
-
-Donc ne fais plus :
-<ng-container
-    *ngIf="!isDocumentEnvoye(code);
-           else mandatEnvoye">
-
-pour la partie mandat.
-Il faut directement :
-<div
-    *ngIf="
-        isShow(
-            code,
-            Constantes.HAB_EDITION_MANDAT_RESILIATION
-        )
-    "
-    class="document edition-mandat">
-
-    <!-- BANDEAU MANDAT COMMUN -->
-
-    <div
-        class="mandat-commun-info"
-        *ngIf="listMandats.length > 1">
-
-        <div class="mandat-commun-text">
-            Veuillez créer un seul mandat
-            si plusieurs risques émanent
-            d'un même assureur, même cadre,
-            même statut et même numéro de contrat.
-        </div>
-
-        <button
-            type="button"
-            class="
-                mandat-link
-                mandat-common-action
-            "
-            [disabled]="
-                !peutCreerNouveauMandatCommun()
-            "
-            (click)="
-                ouvrirPopupMandatCommun()
-            ">
-
-            Créer un mandat commun
-
-        </button>
-    </div>
-
-
-    <!-- RISQUES -->
-
-    <div class="mandat-risks">
-
-        <div
-            class="mandat-risk"
-            *ngFor="
-                let risque of listMandats
-            "
-            [class.mandat-risk-created]="
-                isMandatCree(risque)
-            ">
-
-            <div class="mandat-risk-header">
-
-                <div class="mandat-risk-title">
-
-                    <!-- CASE ORANGE -->
-                    <input
-                        *ngIf="
-                            isMandatCree(risque)
-                        "
-                        class="mandat-created-check"
-                        type="checkbox"
-                        checked
-                        disabled>
-
-                    <span
-                        class="
-                            mandat-risk-cadre
-                        ">
-                        {{
-                            getCadreMandatLib(
-                                risque.cadreCcr
-                            )
-                        }}
-                    </span>
-
-                </div>
-
-
-                <!--
-                    NON CRÉÉ :
-                    "Créer le mandat"
-
-                    CRÉÉ :
-                    "Gérer le mandat"
-                -->
-                <button
-                    type="button"
-                    class="mandat-link"
-                    (click)="
-                        onClickActionMandat(
-                            risque
-                        )
-                    ">
-
-                    {{
-                        getMandatActionLib(
-                            risque
-                        )
-                    }}
-
-                </button>
-
-            </div>
-
-
-            <div class="mandat-risk-content">
-
-                <!--
-                    Garde ici ton affichage actuel :
-                    icon + type + usage/statut/pièces
-                    + CP/ville
-                -->
-
-            </div>
-
-
-            <!-- MENU GÉRER LE MANDAT -->
-
-            <div
-                class="mandat-action-menu"
-                *ngIf="
-                    isMandatCree(risque)
-                    &&
-                    mandatMenuCle === risque.cle
-                ">
-
-                <button
-                    type="button"
-                    (click)="
-                        recreerMandatUnitaire(
-                            risque
-                        )
-                    ">
-                    Recommencer le mandat unitaire
-                </button>
-
-                <button
-                    type="button"
-                    *ngIf="
-                        peutRecreerMandatCommun(
-                            risque
-                        )
-                    "
-                    (click)="
-                        recreerMandatCommun(
-                            risque
-                        )
-                    ">
-                    Recommencer le mandat commun
-                </button>
-
-            </div>
-
-        </div>
-    </div>
-
-
-    <!-- LR AUTOMATIQUE -->
-
-    <div
-        class="
-            mandat-lettre-resiliation
-        ">
-
-        <input
-            type="checkbox"
-            [checked]="hasMandatCree()"
-            disabled>
-
-        <span>
-            Lettres de résiliation
-        </span>
-
-    </div>
-
-
-    <!--
-        SUPPRIMÉ :
-
-        <button>
-            Envoyer les documents
-        </button>
-
-        L'ENVOI EST MAINTENANT
-        EFFECTUÉ DANS CRÉER LE MANDAT.
-    -->
-
-</div>
-
-14. Créer un autre mandat après un premier mandat envoyé
-Ajoute par exemple :
-public hasMandatCree(): boolean {
-
-    return this.listMandats.some(
-        risque =>
-            this.isMandatCree(risque)
-    );
+Donc si l’utilisateur reclique sans rien toucher :
+{
+    "parameters": {}
 }
 
+S’il change ensuite seulement :
+PLAISIR CEDEX → PLAISIR
 
-public peutCreerNouveauMandatCommun():
-    boolean {
+le formulaire devient :
+dirty === true
 
-    const risquesNonCrees =
-        this.listMandats.filter(
-            risque =>
-                !this.isMandatCree(risque)
-        );
+et tu renvoies tous les champs actuels, y compris les valeurs réinjectées par le backend.
+13. Cas du calendrier dateEvt
+Garde ce qu’on avait dit : comme ton calendrier met la valeur depuis TypeScript, marque explicitement le formulaire dirty.
+dialogCalendrier
+    .afterClosed()
+    .subscribe(result => {
 
-    /*
-     * Au moins deux candidats.
-     *
-     * Les règles :
-     * même assureur
-     * même cadre
-     * même statut
-     * même contrat
-     *
-     * restent vérifiées dans ta popup
-     * de mandat commun.
-     */
-    return risquesNonCrees.length >= 2;
-}
-
-Quand tu ouvres une nouvelle création commune, je te conseille également de ne montrer que les risques qui n'ont pas encore de mandat :
-public ouvrirPopupMandatCommun(
-    clesPreselectionnees: number[] = []
-): void {
-
-    const isRecreation =
-        clesPreselectionnees.length > 0;
-
-    const risquesDisponibles =
-        isRecreation
-
-            /*
-             * RECRÉATION COMMUNE :
-             * reprendre le groupe existant.
-             */
-            ? this.listMandats.filter(
-                risque =>
-                    clesPreselectionnees
-                        .includes(
-                            Number(risque.cle)
-                        )
-            )
-
-            /*
-             * NOUVEAU MANDAT COMMUN :
-             * seulement les risques
-             * pas encore créés.
-             */
-            : this.listMandats.filter(
-                risque =>
-                    !this.isMandatCree(
-                        risque
-                    )
-            );
+        if (
+            !result
+            || !result.selectedDate
+        ) {
+            return;
+        }
 
 
-    const dialogRef =
-        this.dialog.open(
-            PopupMandatCommunComponent,
-            {
-                width: '760px',
-                maxWidth: '95vw',
-                disableClose: true,
-
-                data: {
-
-                    risques:
-                        risquesDisponibles,
-
-                    clesPreselectionnees
-                }
-            }
-        );
-
-
-    dialogRef
-        .afterClosed()
-        .subscribe(
-            (
-                risques:
-                    MandatRisqueModelInterface[]
-                    | undefined
-            ) => {
-
-                if (
-                    !risques
-                    || risques.length < 2
-                ) {
-                    return;
-                }
-
-                this.ouvrirMandat(
-                    risques,
-                    'commun'
+        const formattedDate =
+            this.converter
+                .fromDateStringToString(
+                    result.selectedDate,
+                    this.Constantes
+                        .DATE_DEFAULT_AFFICHAGE
                 );
-            }
-        );
-}
-
-15. SCSS : la case orange doit réellement être une checkbox
-Tu avais auparavant obtenu un simple carré orange.
-Utilise :
-.mandat-created-check {
-    appearance: none;
-    -webkit-appearance: none;
-
-    width: 18px;
-    height: 18px;
-
-    flex: 0 0 18px;
-
-    margin: 0 6px 0 0;
-
-    border: 1px solid #cc4c00;
-    border-radius: 3px;
-
-    background: #cc4c00;
-
-    position: relative;
-
-    opacity: 1;
-
-    cursor: default;
-}
-
-.mandat-created-check:checked::after {
-    content: '✓';
-
-    position: absolute;
-
-    left: 50%;
-    top: 50%;
-
-    transform:
-        translate(-50%, -54%);
-
-    color: #ffffff;
-
-    font-size: 14px;
-    font-weight: 700;
-
-    line-height: 1;
-}
-
-.mandat-created-check:disabled {
-    opacity: 1;
-}
-
-Et le panneau mandat ne doit jamais recevoir :
-pointer-events: none;
-opacity: 0.5;
-
-après envoi.
-Ce qui doit être supprimé de ton code
-Fais une recherche projet sur ces anciens éléments :
-gereEnvoiMandatDocuments
-envoyerMandat3
-parameters: {}
-onClickEnvoiDocument(...HAB_EDITION_MANDAT_RESILIATION...)
-
-L'ancien troisième appel ne doit plus exister dans le parcours mandat.
-En revanche, ne supprime surtout pas :
-appelEnvoiDocument(...)
-gereEnvoiDocument(...)
-
-globalement, parce qu'ils servent encore aux attestations et à l'ACR.
-Résultat final attendu
-Scénario	Résultat front
-Premier mandat non créé	Créer le mandat
-1er appel OK	ouverture formulaire
-2e appel OK	mandat créé + envoyé, LR envoyée
-2e appel KO	rien n'est marqué créé
-Mandat créé	case orange + Gérer le mandat
-Autre risque non créé	reste Créer le mandat
-Bloc mandat déjà envoyé	reste actif et réouvrable
-Recréer unitaire	1er appel + formulaire + 2e appel
-Recréer commun	même parcours, groupe concerné
-Recréation KO	ancien mandat reste présent
-Au moins 1 mandat réussi	LR automatiquement cochée
-Nouveau mandat réussi	bilan mis à jour
-Envoyer les documents mandat	supprimé
-Attestation / ACR	parcours actuel inchangé
-Recréation sans PF4	récupération de fondResil / motifResil depuis cache
 
 
-Le point le plus important est donc : edition.isEnvoyer = true peut rester pour le bilan, mais ne doit plus signifier “bloc mandat verrouillé”. Pour le mandat, l'état d'envoi et l'autorisation d'interagir sont maintenant deux choses différentes.
+        if (
+            !formattedDate
+            || formattedDate.includes(
+                'NaN'
+            )
+        ) {
+            return;
+        }
+
+
+        this.mandat.dateEvt =
+            formattedDate;
+
+
+        /*
+         * Le changement vient bien
+         * de l'utilisateur.
+         */
+        this.mandatForm
+            ?.form
+            .markAsDirty();
+    });
+
+14. Ce qu’il ne faut surtout pas faire lors d’une exception
+Une exception, même avec data, n’est pas encore une création réussie.
+Donc à ce moment-là tu ne dois pas faire :
+edition.isEnvoyer = true;
+
+ni :
+marquerMandatCree(...)
+
+ni :
+case orange cochée
+
+ni :
+Créer le mandat → Gérer le mandat
+
+ni fermer la popup.
+result.data sert uniquement à mettre à jour le formulaire courant.
+L’état mandat créé/envoyé ne change qu’après :
+this.isMandatResponseOK(result) === true
+
+Le parcours final devient donc :
+Ouverture mandat
+    ↓
+PF4 reçus au premier appel
+    ↓
+cache fondResil + motifResil
+    ↓
+utilisateur clique Créer le mandat
+    ↓
+2e appel = création + envoi
+    ↓
+             ┌── FINAL OK
+             │      ↓
+             │ mandat créé + envoyé
+             │ fermeture popup
+             │ case orange / Gérer le mandat
+             │
+réponse ─────┤
+             │
+             └── EXCEPTION
+                    ↓
+              data présente ?
+               /         \
+             oui         non
+              ↓           ↓
+      merge dans mandat   rien
+              \           /
+               ↓         ↓
+             retry = true
+                   ↓
+             markAsPristine
+                   ↓
+             popup reste ouverte
+                   ↓
+              nouveau clic
+                   ↓
+       form dirty ? 
+          /       \
+        oui       non
+         ↓         ↓
+   tous champs   parameters: {}
+
+C’est la combinaison qui respecte les trois besoins sans perdre les listes PF4 et sans considérer une donnée retournée par le back comme une modification faite par l’utilisateur.
