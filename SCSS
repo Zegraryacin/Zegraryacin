@@ -78,5 +78,26 @@ private gereEnvoiDocumentOK(
                 .concat(typeEnvoiLib);
     }
 
+
+public isTerminerDisabled(): boolean {
+
+    const editionsFermees =
+        this.listEditions.every(
+            edition => edition.isVoirPlus
+        );
+
+    const modeleHamonEnAttente =
+        this.modeleResiliationSelectionne
+        && !this.isDocumentEnvoye(
+            this.Constantes.HAB_EDITION_MODEL_RESILIATION
+        );
+
+    return !(
+        this.isSignatureEnvoye
+        && editionsFermees
+    )
+    || modeleHamonEnAttente;
+}
+
     this.spinner.hide();
 }
