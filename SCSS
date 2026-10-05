@@ -123,5 +123,47 @@ public isTerminerDisabled(): boolean {
     )
     || modeleHamonEnAttente;
 }
+
+
+private gereEnvoiSignatureOK(
+    result: DataOutChgtadrhabModelInterface
+): void {
+
+    this.isSignatureEnvoye = true;
+
+    this.modeleResiliationSelectionne = false;
+
+    this.listEditions =
+        [] as EditionDocumentModelInterface[];
+
+    if (
+        'data' in result
+        && 'listeEdition' in result.data
+    ) {
+
+        (
+            result.data.listeEdition as string[]
+        ).forEach(codeDocument => {
+
+            this.listEditions.push({
+                code: codeDocument,
+                isVoirPlus: true,
+                isLoaded: false,
+                isEnvoyer: false,
+
+                // Le modèle Hamon utilisera donc directement EMAIL.
+                canalEnvoi:
+                    this.Constantes.TYPE_ENVOI_EMAIL,
+
+                bilanEnvoi:
+                    this.Constantes.STRING_VIDE
+            });
+        });
+    }
+
+    this.scrollToBottom();
+
+    this.spinner.hide();
+}
     this.spinner.hide();
 }
