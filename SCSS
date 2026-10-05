@@ -1,242 +1,82 @@
-Réfléchi pendant 22s
-Oui, dans ce cas on fixe clairement la règle : exception métier = message.type === 'E' uniquement. Ma proposition précédente qui déduisait l’exception à partir d’une réponse « non finale » était trop large.
+private gereEnvoiDocumentOK(
+    code: string,
+    result: DataOutChgtadrhabModelInterface
+): void {
 
-Donc la réponse de ta capture avec :
+    const edition = this.getEditionFromList(code)!;
 
-"message": {
-  "code": "PG4EMI0 -0030-",
-  "type": "I",
-  "message": "Adresse Valide; Presser 'Entrée' pour la créer ou la modifier"
-}
+    let nbDocuments = 0;
 
-n’est pas une exception et ne doit surtout pas déclencher retryApresException, markAsPristine() ni la logique parameters: {}.
+    switch (code) {
 
-Remplace simplement la détection par :
+        case this.Constantes.HAB_EDITION_MODEL_RESILIATION:
 
-private isMandatException(
-    result:
-        DataOutChgtadrhabModelInterface
-        | ErrorModelInterface
-): boolean {
+            nbDocuments = 1;
 
-    return (
-        !!result
-        && 'message' in result
-        && result.message?.type
-            === this.Constantes.TYPE_MESSAGE_ERREUR
-    );
-}
-
-Si votre constante correspond bien à "E". Sinon, directement :
-
-private isMandatException(
-    result:
-        DataOutChgtadrhabModelInterface
-        | ErrorModelInterface
-): boolean {
-
-    return (
-        !!result
-        && 'message' in result
-        && result.message?.type === 'E'
-    );
-}
-
-Et dans onClickCreerMandat(), je te conseille de tester l'exception avant tout le reste :
-
-next: result => {
-
-    /*
-     * =====================================
-     * 1. EXCEPTION MÉTIER OFFICIELLE
-     * message.type === 'E'
-     * =====================================
-     */
-    if (this.isMandatException(result)) {
-
-        /*
-         * Nouveau besoin :
-         * si l'exception retourne data,
-         * on met à jour le mandat affiché.
-         */
-        if (
-            'data' in result
-            && result.data
-            && typeof result.data === 'object'
-            && Object.keys(result.data).length > 0
-        ) {
-
-            this.appliquerDataExceptionMandat(
-                result.data as Partial<
-                    MandatDataModelInterface
-                >
-            );
-        }
+            break;
 
 
-        /*
-         * Le prochain clic est désormais
-         * un retry après exception.
-         */
-        this.retryApresException = true;
+        case this.Constantes.HAB_EDITION_ATTESTATION_SCOLAIRE:
+
+            nbDocuments =
+                this.listEnfants
+                    .filter(e => e.selection)
+                    .length;
+
+            break;
 
 
-        /*
-         * Les données éventuellement renvoyées
-         * par le backend deviennent l'état de
-         * référence.
-         *
-         * Aucune modification utilisateur
-         * n'a encore été faite après l'exception.
-         */
-        setTimeout(() => {
+        case this.Constantes.HAB_EDITION_ATTESTATION_HABITATION:
 
-            this.mandatForm
-                ?.form
-                .markAsPristine();
+            nbDocuments = 1;
 
-        });
+            break;
 
 
-        /*
-         * Affichage du message d'erreur
-         */
-        this.service.errorPopup(
-            result,
-            this.Constantes.AVENANT_COMPONENT,
-            'creationEnvoiMandat'
+        case this.Constantes.HAB_EDITION_ATTESTATION_RC_LOCATIVE:
+
+            nbDocuments =
+                this.listLocations
+                    .filter(l => l.selection)
+                    .length;
+
+            break;
+    }
+
+
+    const pluriel =
+        nbDocuments > 1
+            ? 's'
+            : this.Constantes.STRING_VIDE;
+
+
+    const typeEnvoiLib =
+        this.Converter.getTranscoLibelle(
+            this.Constantes.TRANSCO_TYPE_ENVOI_LIB,
+            edition.canalEnvoi
         );
 
 
-        /*
-         * On garde la popup mandat ouverte.
-         */
-        return;
-    }
-
-
-    /*
-     * =====================================
-     * 2. TRAITEMENT NORMAL
-     * type I, autres réponses worker, succès...
-     * =====================================
-     */
-
     if (
-        this.isMandatResponseOK(result)
+        nbDocuments > 0
+        && typeEnvoiLib !==
+           this.Constantes.REF_LIB_INDEFINI
     ) {
 
-        this.retryApresException = false;
+        edition.isEnvoyer = true;
 
-        this.dialogRef.close({
-            success: true,
-            mode: this.dialogData.mode,
-            riskKeys:
-                this.dialogData.riskKeys
-        });
+        edition.isVoirPlus = true;
 
-        return;
+        edition.bilanEnvoi =
+            nbDocuments
+                .toString()
+                .concat(' document')
+                .concat(pluriel)
+                .concat(' envoyé')
+                .concat(pluriel)
+                .concat(' par ')
+                .concat(typeEnvoiLib);
     }
 
-
-    /*
-     * Autre réponse métier :
-     * garde ici ton traitement existant.
-     *
-     * Elle n'est PAS une exception au sens
-     * du nouveau besoin puisqu'elle n'est
-     * pas de type E.
-     */
-    this.service.errorPopup(
-        result,
-        this.Constantes.AVENANT_COMPONENT,
-        'creationEnvoiMandat'
-    );
+    this.spinner.hide();
 }
-
-Le comportement devient donc exactement :
-
-message.type = E
-        ↓
-EXCEPTION
-        ↓
-result.data existe ?
-        ↓
-oui → mise à jour de this.mandat
-        ↓
-retryApresException = true
-        ↓
-markAsPristine()
-        ↓
-popup reste ouverte
-        ↓
-prochain clic :
-    dirty = false → parameters: {}
-    dirty = true  → tous les paramètres
-Alors que :
-
-message.type = I
-➡️ aucun passage dans cette logique d'exception.
-
-Et la méthode de mise à jour des données reste valable :
-
-private appliquerDataExceptionMandat(
-    data:
-        Partial<MandatDataModelInterface>
-        | null
-        | undefined
-): void {
-
-    if (
-        !data
-        || typeof data !== 'object'
-        || Object.keys(data).length === 0
-    ) {
-        return;
-    }
-
-
-    /*
-     * Si l'exception renvoie exceptionnellement
-     * les PF4, on les conserve également.
-     */
-    this.memoriserPf4DepuisData(data);
-
-
-    /*
-     * On ne laisse pas des listes vides
-     * écraser le cache fondResil/motifResil.
-     */
-    const {
-        fondResil,
-        motifResil,
-        ...dataMandat
-    } = data;
-
-
-    /*
-     * Mise à jour des valeurs visibles
-     * dans le formulaire.
-     */
-    this.mandat = {
-        ...this.mandat,
-        ...dataMandat
-    } as MandatDataModelInterface;
-
-
-    /*
-     * Rechargement des PF4 :
-     * réponse si disponible,
-     * sinon cache.
-     */
-    this.chargerListesPf4(data);
-
-
-    this.mandat.fondResil =
-        this.fondResil;
-
-    this.mandat.motifResil =
-        this.motifResil;
-}
-
-Donc sur ce point : E = exception officielle, exclusivement. Le I de ta capture doit rester traité par le parcours normal déjà existant.
