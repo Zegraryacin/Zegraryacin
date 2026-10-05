@@ -1,102 +1,127 @@
-private gereEnvoiMandatDocuments(): void {
+<ng-container *ngFor="let code of Constantes.HAB_EDITION_DOCUMENTS">
 
-    const dataIn: DataInModelInterface = {
-        idDossier: this.service.getCommunContexte().dossierId,
-        resourceId: this.service.getCommunContexte().resourceId,
+    <div *ngIf="isWithEdition(code)">
 
-        /*
-         * 3e appel envoiavthabmandat :
-         * aucun paramètre métier nécessaire.
-         */
-        parameters: {},
+        <!-- CAS SPECIAL : MODELE DE RESILIATION -->
+        <ng-container
+            *ngIf="
+                code === Constantes.HAB_EDITION_MODEL_RESILIATION;
+                else editionStandard
+            ">
 
-        screenkey: this.Constantes.SCREEN_GENERIC
-    };
+            <div class="modele-resiliation-container">
 
-    this.service.envoiAvenantMandat(dataIn).subscribe({
+                <div class="checkbox">
 
-        next: result => {
+                    <input
+                        id="modeleResiliation"
+                        name="modeleResiliation"
+                        type="checkbox"
+                        [(ngModel)]="modeleResiliationSelectionne"
+                        [disabled]="isDocumentEnvoye(code)" />
 
-            if (!this.isMandatResponseOK(result)) {
+                    <label
+                        class="label"
+                        for="modeleResiliation">
 
-                this.spinner.hide();
+                        Modèle de lettre de résiliation Loi Hamon Propriétaire
 
-                this.service.errorPopup(
-                    result,
-                    this.Constantes.AVENANT_COMPONENT,
-                    'gereEnvoiMandatDocuments'
-                );
+                    </label>
 
-                return;
-            }
-
-            const edition = this.getEditionFromList(
-                this.Constantes.HAB_EDITION_MANDAT_RESILIATION
-            );
-
-            /*
-             * Ne surtout pas utiliser :
-             *
-             * const edition = ... !
-             *
-             * car si l'édition n'est pas trouvée,
-             * on aurait une exception avant spinner.hide().
-             */
-            if (!edition) {
-
-                console.error(
-                    '[MANDAT] Edition Mandat de résiliation introuvable',
-                    this.listEditions
-                );
-
-                this.spinner.hide();
-                return;
-            }
-
-            /*
-             * Le worker a terminé l'envoi.
-             *
-             * Exemple de réponse documentée :
-             *
-             * type    = I
-             * code    = PG4ALIO-0004-
-             * message = Transaction terminée OK
-             */
-            edition.isEnvoyer = true;
-            edition.isVoirPlus = true;
-
-            edition.bilanEnvoi = this.getBilanEnvoiMandat();
-
-            this.spinner.hide();
-        },
-
-        error: error => {
-
-            console.error(
-                '[MANDAT] Erreur envoiavthabmandat final',
-                error
-            );
-
-            this.spinner.hide();
-        }
-    });
+                </div>
 
 
+                <div
+                    *ngIf="!isDocumentEnvoye(code)"
+                    class="ligne-with-button">
+
+                    <button
+                        type="button"
+                        class="chgt-button obligatoire"
+                        [disabled]="isEnvoiDocumentDisabled(code)"
+                        (click)="onClickEnvoiDocument(code)">
+
+                        {{ Constantes.ENVOI_ATTESTATION_ENVOYER_DOCUMENT_LIB }}
+
+                    </button>
+
+                </div>
 
 
-private isMandatResponseOK(
-    result: DataOutChgtadrhabModelInterface | ErrorModelInterface
-): result is DataOutChgtadrhabModelInterface {
+                <div
+                    *ngIf="isDocumentEnvoye(code)"
+                    class="recapitulatif-bilan">
 
-    return 'data' in result
-        && 'message' in result
-        && result.message?.type !== this.Constantes.TYPE_MESSAGE_ERREUR;
-}
+                    <div class="chgt-coche-verte"></div>
+
+                    <span>
+                        {{ getBilanEnvoi(code) }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </ng-container>
 
 
+        <!-- TOUT TON CODE ACTUEL -->
+        <ng-template #editionStandard>
 
+            <div
+                (click)="onClickVoir(code)"
+                [class.disabled]="isActionDisabled(code)"
+                [class.moins]="!isVoirPlus(code)"
+                [class.plus]="isVoirPlus(code)"
+                class="recapitulatif">
 
+                <span class="recapitulatif-lib">
 
+                    {{ getVoirLib(code) }}
 
+                    <span
+                        *ngIf="
+                            code === Constantes.HAB_EDITION_ACR_SUPPRESSION_HABITATION
+                            && !isDocumentEnvoye(code)
+                        ">
+                        {{ getAcrSuppressionSelectionLib() }}
+                    </span>
 
-}
+                </span>
+
+                <div
+                    *ngIf="isDocumentEnvoye(code)"
+                    class="recapitulatif-bilan">
+
+                    <div class="chgt-coche-verte"></div>
+
+                    <span>
+                        {{ getBilanEnvoi(code) }}
+                    </span>
+
+                </div>
+
+                <div class="fleche">
+
+                    <div
+                        [class.moins]="!isVoirPlus(code)"
+                        [class.plus]="isVoirPlus(code)"
+                        class="icon">
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ICI TU LAIS TOUS TES BLOCS ACTUELS -->
+            <!-- Mandat -->
+            <!-- Attestation scolaire -->
+            <!-- Attestation habitation -->
+            <!-- RC locative -->
+            <!-- ACR suppression -->
+
+        </ng-template>
+
+    </div>
+
+</ng-container>
