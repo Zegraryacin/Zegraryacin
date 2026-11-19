@@ -1,0 +1,397 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { DropdownModule } from 'primeng/dropdown';
+import { InputTextModule } from 'primeng/inputtext';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TableModule } from 'primeng/table';
+import { Subscription } from 'rxjs';
+
+import { Agence } from '@app/gestion-quotas-rdv-visio/models/agence.model';
+import { Quota } from '@app/gestion-quotas-rdv-visio/models/quota.model';
+import { QuotaService } from '@app/gestion-quotas-rdv-visio/services/quota.service';
+
+type TypeCascade = 'NATIONAL' | 'REGION' | 'ZONE';
+
+interface QuotaRow {
+    id: string;
+    dateDebut: string;
+    dateFin: string;
+    tel: number | null;
+    web: number | null;
+    agence: number | null;
+    maxQuota: number | null;
+    coefficientQuota: number | null;
+    statutQuota: string;
+    validated: boolean;
+    codeRegion?: string;
+    libelleRegion?: string;
+    codeZone?: string;
+    libelleZone?: string;
+    codeAgence?: string;
+    libelleAgence?: string;
+    flagSamedi?: boolean;
+}
+
+@Component({
+    selector: 'quota-exploration-quotas-rdv-visio',
+    standalone: true,
+    imports: [
+        CommonModule,
+        FormsModule,
+        TableModule,
+        DropdownModule,
+        InputTextModule,
+        ProgressSpinnerModule
+    ],
+    templateUrl: './exploration-quotas-rdv-visio.component.html',
+    styleUrls: ['./exploration-quotas-rdv-visio.component.scss']
+})
+export class ExplorationQuotasRdvVisioComponent implements OnInit, OnDestroy {
+
+    agenceSelectionnee = '';
+    regionSelectionnee = '';
+    zoneSelectionnee = '';
+    nationalSelectionne = '';
+
+    agences: Agence[] = [];
+    regions: Agence[] = [];
+    zones: Agence[] = [];
+
+    nationaux = [
+        { code: '0RA', nom: 'National', label: '0RA - National' }
+    ];
+
+    rows: QuotaRow[] = [];
+    historiqueQuotas = false;
+    cascadeActive = false;
+    loadingCascade = false;
+
+    private cascadeCourante?: { type: TypeCascade; code: string };
+    private requeteQuotas?: Subscription;
+    private requeteAgences?: Subscription;
+    private requeteRegions?: Subscription;
+    private requeteZones?: Subscription;
+
+    constructor(private quotaService: QuotaService) {}
+
+    ngOnInit(): void {
+        this.loadAgences();
+        this.loadRegions();
+
+        this.requeteZones = this.quotaService.loadAllZones().subscribe({
+            next: zones => {
+                this.zones = this.avecCodeDansNom(zones);
+            },
+            error: err => console.error('Erreur de chargement des zones', err)
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.annulerLectureQuotas();
+        this.requeteAgences?.unsubscribe();
+        this.requeteRegions?.unsubscribe();
+        this.requeteZones?.unsubscribe();
+    }
+
+    private avecCodeDansNom(structures: Agence[]): Agence[] {
+        return structures.map(structure => ({
+            ...structure,
+            nom: `${structure.code} - ${structure.nom}`
+        }));
+    }
+
+    private affecterAgences(agences: Agence[]): void {
+        this.agences = agences.map(agence => ({
+            ...agence,
+            label: `${agence.code} - ${agence.nom}`
+        }));
+    }
+
+    loadAgences(): void {
+        this.requeteAgences?.unsubscribe();
+        this.requeteAgences = this.quotaService.loadAgences().subscribe({
+            next: agences => this.affecterAgences(agences),
+            error: err => console.error('Erreur de chargement des agences', err)
+        });
+    }
+
+    loadRegions(): void {
+        this.requeteRegions?.unsubscribe();
+        this.requeteRegions = this.quotaService.loadRegions().subscribe({
+            next: regions => {
+                this.regions = this.avecCodeDansNom(regions);
+            },
+            error: err => console.error('Erreur de chargement des régions', err)
+        });
+    }
+
+    selectNational(): void {
+        this.regionSelectionnee = '';
+        this.zoneSelectionnee = '';
+        this.agenceSelectionnee = '';
+        this.rows = [];
+
+        if (this.cascadeActive) {
+            this.chargerCascade('NATIONAL', this.nationalSelectionne);
+        } else {
+            this.loadQuotas(this.nationalSelectionne);
+        }
+    }
+
+    selectRegion(): void {
+        this.zoneSelectionnee = '';
+        this.agenceSelectionnee = '';
+        this.rows = [];
+
+        const region = this.regionSelectionnee;
+
+        if (region) {
+            this.requeteZones?.unsubscribe();
+            this.requeteZones = this.quotaService.loadZones(region).subscribe({
+                next: zones => {
+                    this.zones = this.avecCodeDansNom(zones);
+                },
+                error: err => console.error('Erreur de chargement des zones', err)
+            });
+
+            this.requeteAgences?.unsubscribe();
+            this.requeteAgences = this.quotaService
+                .loadAgencesRegion(region)
+                .subscribe({
+                    next: agences => this.affecterAgences(agences),
+                    error: err => console.error('Erreur de chargement des agences', err)
+                });
+        }
+
+        if (this.cascadeActive) {
+            this.chargerCascade('REGION', region);
+        } else {
+            this.loadQuotas(region);
+        }
+    }
+
+    selectZone(): void {
+        this.agenceSelectionnee = '';
+        this.rows = [];
+
+        const zone = this.zoneSelectionnee;
+
+        this.requeteAgences?.unsubscribe();
+        this.requeteAgences = this.quotaService.loadAgencesZone(zone).subscribe({
+            next: agences => this.affecterAgences(agences),
+            error: err => console.error('Erreur de chargement des agences', err)
+        });
+
+        if (this.cascadeActive) {
+            this.chargerCascade('ZONE', zone);
+        } else {
+            this.loadQuotas(zone);
+        }
+    }
+
+    selectAgence(_event?: unknown): void {
+        this.loadQuotas(this.agenceSelectionnee);
+    }
+
+    onCascadeChange(active: boolean = this.cascadeActive): void {
+        this.cascadeActive = active;
+
+        if (!active) {
+            this.annulerLectureQuotas();
+            this.rows = [];
+            return;
+        }
+
+        // Priorité utilisée par le composant d'origine à l'activation.
+        if (this.nationalSelectionne === '0RA') {
+            this.chargerCascade('NATIONAL', '0RA');
+        } else if (this.zoneSelectionnee) {
+            this.chargerCascade('ZONE', this.zoneSelectionnee);
+        } else if (this.regionSelectionnee) {
+            this.chargerCascade('REGION', this.regionSelectionnee);
+        }
+    }
+
+    onHistoriqueChange(actif: boolean): void {
+        this.historiqueQuotas = actif;
+
+        const cascade = this.cascadeCourante;
+        if (this.cascadeActive && cascade) {
+            this.chargerCascade(cascade.type, cascade.code);
+        }
+    }
+
+    private annulerLectureQuotas(): void {
+        this.requeteQuotas?.unsubscribe();
+        this.requeteQuotas = undefined;
+        this.cascadeCourante = undefined;
+        this.loadingCascade = false;
+    }
+
+    private chargerCascade(type: TypeCascade, code: string): void {
+        this.annulerLectureQuotas();
+
+        if (!code) {
+            return;
+        }
+
+        this.cascadeCourante = { type, code };
+        this.loadingCascade = true;
+
+        const statutQuota = this.historiqueQuotas ? undefined : 'A';
+
+        this.requeteQuotas = this.quotaService
+            .loadCascade(type, code, statutQuota)
+            .subscribe({
+                next: quotas => {
+                    this.rows = quotas
+                        .map(quota => this.creerLigne(quota))
+                        .sort((a, b) => this.comparerLignes(a, b));
+
+                    this.loadingCascade = false;
+                },
+                error: err => {
+                    this.rows = [];
+                    this.loadingCascade = false;
+                    console.error('Erreur de chargement des quotas en cascade', err);
+                }
+            });
+    }
+
+    loadQuotas(structure: string): void {
+        this.annulerLectureQuotas();
+
+        if (this.isBlankValue(structure)) {
+            return;
+        }
+
+        this.requeteQuotas = this.quotaService
+            .listerQuotas(structure, '', '')
+            .subscribe({
+                next: quotas => {
+                    this.rows = quotas.map(quota => {
+                        const row = this.creerLigne(quota);
+                        this.updateMaxQuota(row);
+                        return row;
+                    });
+                },
+                error: err => console.error('Erreur de chargement des quotas', err)
+            });
+    }
+
+    private creerLigne(quota: Quota): QuotaRow {
+        return {
+            id: quota.idQuota,
+            dateDebut: quota.dateDebut,
+            dateFin: quota.dateFin,
+            coefficientQuota: Number(quota.coefficientQuota || 0),
+            agence: Number(quota.quotaAgencePourcentage || quota.quotaAgent),
+            web: Number(quota.quotaWebPourcentage || quota.quotaWeb),
+            tel: Number(quota.quotaCentreTelephoniquePourcentage || quota.quotaTel),
+            statutQuota: quota.statutQuota,
+            codeRegion: quota.codeRegion,
+            libelleRegion: quota.libelleRegion,
+            codeZone: quota.codeZone,
+            libelleZone: quota.libelleZone,
+            codeAgence: quota.codeAgence,
+            libelleAgence: quota.libelleAgence,
+            flagSamedi: quota.flagSamedi === 'Y',
+            maxQuota: 0,
+            validated: true
+        };
+    }
+
+    private comparerLignes(a: QuotaRow, b: QuotaRow): number {
+        return this.comparerLibelles(a.libelleRegion, b.libelleRegion)
+            || this.niveau(a) - this.niveau(b)
+            || this.comparerLibelles(a.libelleZone, b.libelleZone)
+            || this.comparerLibelles(a.libelleAgence, b.libelleAgence);
+    }
+
+    private comparerLibelles(a?: string, b?: string): number {
+        return (a || '').localeCompare(b || '', 'fr', { sensitivity: 'base' });
+    }
+
+    private niveau(row: QuotaRow): number {
+        if (row.libelleRegion && !row.libelleZone && !row.libelleAgence) {
+            return 1;
+        }
+
+        if (row.libelleRegion && row.libelleZone && !row.libelleAgence) {
+            return 2;
+        }
+
+        return 3;
+    }
+
+    updateMaxQuota(row: QuotaRow): void {
+        row.maxQuota = Math.max(
+            Number(row.tel) || 0,
+            Number(row.web) || 0,
+            Number(row.agence) || 0
+        );
+    }
+
+    limitQuota(event: Event, row: QuotaRow, field: 'agence' | 'tel' | 'web'): void {
+        const input = event.target as HTMLInputElement;
+        let value = input.value.substring(0, 3);
+
+        if (Number(value) > 100) {
+            value = '100';
+        }
+
+        input.value = value;
+        row[field] = value === '' ? null : Number(value);
+        this.updateMaxQuota(row);
+    }
+
+    isBlankValue(value: unknown): boolean {
+        return value === null || value === undefined || value === '';
+    }
+
+    isQuotaActif(row: QuotaRow): boolean {
+        return row.statutQuota?.trim() === 'A';
+    }
+
+    get displayedRows(): QuotaRow[] {
+        if (this.historiqueQuotas) {
+            return this.rows;
+        }
+
+        return this.rows.filter(row => this.isQuotaActif(row));
+    }
+
+    get nomAgenceSelectionnee(): string {
+        const agence = this.agences.find(a => a.code === this.agenceSelectionnee);
+        return agence?.nom ?? '';
+    }
+
+    resetRegion(): void {
+        this.annulerLectureQuotas();
+        this.requeteZones?.unsubscribe();
+        this.regionSelectionnee = '';
+        this.rows = [];
+        this.zones = [];
+        this.loadAgences();
+    }
+
+    resetZone(): void {
+        this.annulerLectureQuotas();
+        this.zoneSelectionnee = '';
+        this.rows = [];
+        this.loadAgences();
+    }
+
+    resetAgence(): void {
+        this.annulerLectureQuotas();
+        this.agenceSelectionnee = '';
+        this.rows = [];
+    }
+
+    resetNational(): void {
+        this.annulerLectureQuotas();
+        this.nationalSelectionne = '';
+        this.rows = [];
+    }
+}
