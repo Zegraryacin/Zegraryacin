@@ -1,0 +1,129 @@
+<div class="header-container">
+    <div class="agency-container">
+        <label for="national">National</label>
+        <p-dropdown
+            inputId="national"
+            [options]="nationaux"
+            optionLabel="label"
+            optionValue="code"
+            [(ngModel)]="nationalSelectionne"
+            (onChange)="selectNational()"
+            placeholder="Sélectionner national">
+        </p-dropdown>
+    </div>
+
+    <div class="agency-container">
+        <label for="region">Région</label>
+        <p-dropdown
+            inputId="region"
+            [options]="regions"
+            optionLabel="nom"
+            optionValue="code"
+            [filter]="true"
+            [(ngModel)]="regionSelectionnee"
+            (onChange)="selectRegion()"
+            placeholder="Sélectionner une région">
+        </p-dropdown>
+    </div>
+
+    <div class="agency-container">
+        <label for="zone">Zone</label>
+        <p-dropdown
+            inputId="zone"
+            [options]="zones"
+            optionLabel="nom"
+            optionValue="code"
+            [filter]="true"
+            [(ngModel)]="zoneSelectionnee"
+            (onChange)="selectZone()"
+            placeholder="Sélectionner une zone">
+        </p-dropdown>
+    </div>
+
+    <div class="agency-container">
+        <label for="agence">Agence</label>
+        <p-dropdown
+            inputId="agence"
+            [options]="agences"
+            optionLabel="label"
+            optionValue="code"
+            [filter]="true"
+            filterBy="label"
+            [(ngModel)]="agenceSelectionnee"
+            (onChange)="selectAgence()"
+            placeholder="Sélectionner une agence">
+        </p-dropdown>
+    </div>
+</div>
+
+<div class="exploration-options">
+    <label>
+        <input
+            type="checkbox"
+            [ngModel]="cascadeActive"
+            (ngModelChange)="onCascadeChange($event)">
+        Exploration en cascade
+    </label>
+
+    <label>
+        <input
+            type="checkbox"
+            [ngModel]="historiqueQuotas"
+            (ngModelChange)="onHistoriqueChange($event)">
+        Historique
+    </label>
+</div>
+
+<p-progressSpinner *ngIf="loadingCascade"></p-progressSpinner>
+
+<p-table
+    [value]="rows"
+    dataKey="id"
+    styleClass="p-datatable-sm">
+
+    <ng-template pTemplate="header">
+        <tr>
+            <th class="date-column">Date début</th>
+            <th class="date-column">Date fin</th>
+            <th class="quota-column">Coéf. Collab</th>
+            <th class="quota-column">
+                RDV Samedi
+                <p style="color: red; margin: 0;">(pour les agences concernées)</p>
+            </th>
+            <th class="quota-column">Quota via l'agence max (%)</th>
+            <th class="quota-column">Quota via CCC max (%)</th>
+            <th class="quota-column">Quota via web max (%)</th>
+            <th class="quota-column">Quota max possible (%)</th>
+        </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+        <tr>
+            <td>
+                <input pInputText type="date" class="date-input"
+                       [ngModel]="row.dateDebut" disabled>
+            </td>
+            <td>
+                <input pInputText type="date" class="date-input"
+                       [ngModel]="row.dateFin" disabled>
+            </td>
+            <td>
+                <input pInputText type="number"
+                       [ngModel]="row.coefficientQuota" disabled>
+            </td>
+            <td>
+                <input type="checkbox" [ngModel]="row.flagSamedi" disabled>
+            </td>
+            <td>
+                <input pInputText type="number" [ngModel]="row.agence" disabled>
+            </td>
+            <td>
+                <input pInputText type="number" [ngModel]="row.tel" disabled>
+            </td>
+            <td>
+                <input pInputText type="number" [ngModel]="row.web" disabled>
+            </td>
+            <td>{{ row.maxQuota ?? 0 }}</td>
+        </tr>
+    </ng-template>
+</p-table>
