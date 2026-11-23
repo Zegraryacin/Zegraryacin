@@ -1,169 +1,118 @@
-private gereEnvoiDocumentOK(
-    code: string,
-    result: DataOutChgtadrhabModelInterface
-): void {
+public List<QuotaResponse> listerQuotas(
+        String structure,
+        String dateDebut,
+        String dateFin,
+        String statutQuota) throws TechnicalException {
 
-    const edition = this.getEditionFromList(code)!;
+    try {
+        List<QuotaResponse> quotas = quotaRendezvousProxyClient.listerQuotas(
+                structure,
+                dateDebut,
+                dateFin,
+                statutQuota
+        );
 
-    let nbDocuments = 0;
+        if (quotas.isEmpty()) {
+            return quotas;
+        }
 
-    switch (code) {
+        List<OrganigrammeAgenceResponse> organigramme =
+                organigrammeAgenceService.getOrganigramme();
 
-        case this.Constantes.HAB_EDITION_MODEL_RESILIATION:
+        // Ces recherches sont mémorisées uniquement pour cet appel.
+        Map<String, Optional<OrganigrammeAgenceResponse>> agencesParCode =
+                new HashMap<>();
+        Map<String, Optional<OrganigrammeAgenceResponse>> zonesParCode =
+                new HashMap<>();
+        Map<String, Optional<OrganigrammeAgenceResponse>> regionsParCode =
+                new HashMap<>();
 
-            nbDocuments = 1;
+        for (QuotaResponse quota : quotas) {
+            String codeStructure = quota.getStructure();
 
-            break;
+            // 1. Agence
+            Optional<OrganigrammeAgenceResponse> agence =
+                    agencesParCode.computeIfAbsent(
+                            codeStructure,
+                            code -> organigramme.stream()
+                                    .filter(entree -> code.equals(entree.getCodeAgence()))
+                                    .findFirst()
+                    );
 
+            if (agence.isPresent()) {
+                OrganigrammeAgenceResponse entree = agence.get();
 
-        case this.Constantes.HAB_EDITION_ATTESTATION_SCOLAIRE:
+                quota.setCodeRegion(entree.getCodeRegion());
+                quota.setLibelleRegion(entree.getLibelleRegion());
+                quota.setCodeZone(entree.getCodeZone());
+                quota.setLibelleZone(entree.getLibelleZone());
+                quota.setCodeAgence(entree.getCodeAgence());
+                quota.setLibelleAgence(entree.getLibelleAgence());
+            }
 
-            nbDocuments =
-                this.listEnfants
-                    .filter(e => e.selection)
-                    .length;
+            // 2. National
+            if ("0RA".equals(codeStructure)) {
+                quota.setCodeRegion("");
+                quota.setLibelleRegion("");
+                quota.setCodeZone("");
+                quota.setLibelleZone("");
+                quota.setCodeAgence("");
+                quota.setLibelleAgence("");
+            }
 
-            break;
+            // 3. Zone, uniquement si le libellé zone est null
+            if (quota.getLibelleZone() == null) {
+                Optional<OrganigrammeAgenceResponse> zone =
+                        zonesParCode.computeIfAbsent(
+                                codeStructure,
+                                code -> organigramme.stream()
+                                        .filter(entree -> code.equals(entree.getCodeZone()))
+                                        .findFirst()
+                        );
 
+                if (zone.isPresent()) {
+                    OrganigrammeAgenceResponse entree = zone.get();
 
-        case this.Constantes.HAB_EDITION_ATTESTATION_HABITATION:
+                    quota.setCodeRegion(entree.getCodeRegion());
+                    quota.setLibelleRegion(entree.getLibelleRegion());
+                    quota.setCodeZone(entree.getCodeZone());
+                    quota.setLibelleZone(entree.getLibelleZone());
+                    quota.setCodeAgence("");
+                    quota.setLibelleAgence("");
+                }
+            }
 
-            nbDocuments = 1;
+            // 4. Région, uniquement si le libellé région est null
+            if (quota.getLibelleRegion() == null) {
+                Optional<OrganigrammeAgenceResponse> region =
+                        regionsParCode.computeIfAbsent(
+                                codeStructure,
+                                code -> organigramme.stream()
+                                        .filter(entree -> code.equals(entree.getCodeRegion()))
+                                        .findFirst()
+                        );
 
-            break;
+                if (region.isPresent()) {
+                    OrganigrammeAgenceResponse entree = region.get();
 
+                    quota.setCodeRegion(entree.getCodeRegion());
+                    quota.setLibelleRegion(entree.getLibelleRegion());
+                    quota.setCodeZone("");
+                    quota.setLibelleZone("");
+                    quota.setCodeAgence("");
+                    quota.setLibelleAgence("");
+                }
+            }
+        }
 
-        case this.Constantes.HAB_EDITION_ATTESTATION_RC_LOCATIVE:
+        return quotas;
 
-            nbDocuments =
-                this.listLocations
-                    .filter(l => l.selection)
-                    .length;
+    } catch (Exception e) {
+        e.printStackTrace();
 
-            break;
+        throw buildTechnicalException(
+                e,
+                "Un problème est survenu lors de la récupération des quotas"
+        );
     }
-
-
-    const pluriel =
-        nbDocuments > 1
-            ? 's'
-            : this.Constantes.STRING_VIDE;
-
-
-    const typeEnvoiLib =
-        this.Converter.getTranscoLibelle(
-            this.Constantes.TRANSCO_TYPE_ENVOI_LIB,
-            edition.canalEnvoi
-        );
-
-
-    if (
-        nbDocuments > 0
-        && typeEnvoiLib !==
-           this.Constantes.REF_LIB_INDEFINI
-    ) {
-
-        edition.isEnvoyer = true;
-
-        edition.isVoirPlus = true;
-
-        edition.bilanEnvoi =
-            nbDocuments
-                .toString()
-                .concat(' document')
-                .concat(pluriel)
-                .concat(' envoyé')
-                .concat(pluriel)
-                .concat(' par ')
-                .concat(typeEnvoiLib);
-    }
-
-
-public isTerminerDisabled(): boolean {
-
-    const editionsFermees =
-        this.listEditions.every(
-            edition => edition.isVoirPlus
-        );
-
-    const modeleHamonEnAttente =
-        this.modeleResiliationSelectionne
-        && !this.isDocumentEnvoye(
-            this.Constantes.HAB_EDITION_MODEL_RESILIATION
-        );
-
-    return !(
-        this.isSignatureEnvoye
-        && editionsFermees
-    )
-    || modeleHamonEnAttente;
-}
-
-
-public isTerminerDisabled(): boolean {
-
-    const editionsFermees =
-        this.listEditions.every(
-            edition => edition.isVoirPlus
-        );
-
-    const editionModeleHamon =
-        this.getEditionFromList(
-            this.Constantes.HAB_EDITION_MODEL_RESILIATION
-        );
-
-    const modeleHamonEnAttente =
-        !!editionModeleHamon
-        && this.modeleResiliationSelectionne
-        && !editionModeleHamon.isEnvoyer;
-
-    return !(
-        this.isSignatureEnvoye
-        && editionsFermees
-    )
-    || modeleHamonEnAttente;
-}
-
-
-private gereEnvoiSignatureOK(
-    result: DataOutChgtadrhabModelInterface
-): void {
-
-    this.isSignatureEnvoye = true;
-
-    this.modeleResiliationSelectionne = false;
-
-    this.listEditions =
-        [] as EditionDocumentModelInterface[];
-
-    if (
-        'data' in result
-        && 'listeEdition' in result.data
-    ) {
-
-        (
-            result.data.listeEdition as string[]
-        ).forEach(codeDocument => {
-
-            this.listEditions.push({
-                code: codeDocument,
-                isVoirPlus: true,
-                isLoaded: false,
-                isEnvoyer: false,
-
-                // Le modèle Hamon utilisera donc directement EMAIL.
-                canalEnvoi:
-                    this.Constantes.TYPE_ENVOI_EMAIL,
-
-                bilanEnvoi:
-                    this.Constantes.STRING_VIDE
-            });
-        });
-    }
-
-    this.scrollToBottom();
-
-    this.spinner.hide();
-}
-    this.spinner.hide();
 }
