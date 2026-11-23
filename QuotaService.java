@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -74,22 +73,17 @@ public class QuotaService {
                             dateFin,
                             statutQuota);
 
-            if (quotas.isEmpty()) {
-                return quotas;
-            }
-
-            Map<String, OrganigrammeAgenceResponse> agencesParCode = new HashMap<>();
-            Map<String, OrganigrammeAgenceResponse> zonesParCode = new HashMap<>();
-            Map<String, OrganigrammeAgenceResponse> regionsParCode = new HashMap<>();
-            for (OrganigrammeAgenceResponse entree : organigrammeAgenceService.getOrganigramme()) {
-                agencesParCode.putIfAbsent(entree.getCodeAgence(), entree);
-                zonesParCode.putIfAbsent(entree.getCodeZone(), entree);
-                regionsParCode.putIfAbsent(entree.getCodeRegion(), entree);
-            }
-
             for (QuotaResponse quota : quotas) {
 
-                OrganigrammeAgenceResponse agence = agencesParCode.get(quota.getStructure());
+                OrganigrammeAgenceResponse agence =
+                        organigrammeAgenceService
+                                .getOrganigramme()
+                                .stream()
+                                .filter(o ->
+                                        quota.getStructure()
+                                                .equals(o.getCodeAgence()))
+                                .findFirst()
+                                .orElse(null);
 
                 if (agence != null) {
 
@@ -131,7 +125,16 @@ public class QuotaService {
 
                 if (quota.getLibelleZone() == null) {
 
-                    OrganigrammeAgenceResponse zone = zonesParCode.get(quota.getStructure());
+                    OrganigrammeAgenceResponse zone =
+                            organigrammeAgenceService
+                                    .getOrganigramme()
+                                    .stream()
+                                    .filter(o ->
+                                            quota.getStructure()
+                                                    .equals(
+                                                            o.getCodeZone()))
+                                    .findFirst()
+                                    .orElse(null);
 
                     if (zone != null) {
 
@@ -157,7 +160,16 @@ public class QuotaService {
 
                 if (quota.getLibelleRegion() == null) {
 
-                    OrganigrammeAgenceResponse region = regionsParCode.get(quota.getStructure());
+                    OrganigrammeAgenceResponse region =
+                            organigrammeAgenceService
+                                    .getOrganigramme()
+                                    .stream()
+                                    .filter(o ->
+                                            quota.getStructure()
+                                                    .equals(
+                                                            o.getCodeRegion()))
+                                    .findFirst()
+                                    .orElse(null);
 
                     if (region != null) {
 
@@ -342,21 +354,6 @@ public class QuotaService {
 
 
             resultat.addAll(quotasStructure);
-            OrganigrammeAgenceResponse structure = null;
-            if (!quotasStructure.isEmpty()) {
-                if ("REGION".equals(type)) {
-                    structure = organigrammeAgenceService.getOrganigramme().stream()
-                            .filter(entree -> code.equals(entree.getCodeRegion()))
-                            .findFirst()
-                            .orElse(null);
-                } else if ("ZONE".equals(type)) {
-                    structure = organigrammeAgenceService.getOrganigramme().stream()
-                            .filter(entree -> code.equals(entree.getCodeZone()))
-                            .findFirst()
-                            .orElse(null);
-                }
-            }
-
             for (QuotaResponse quota : quotasStructure) {
 
                 if ("NATIONAL".equals(type)) {
@@ -372,7 +369,15 @@ public class QuotaService {
 
                 } else if ("REGION".equals(type)) {
 
-                    OrganigrammeAgenceResponse region = structure;
+                    OrganigrammeAgenceResponse region =
+                            organigrammeAgenceService
+                                    .getOrganigramme()
+                                    .stream()
+                                    .filter(o ->
+                                            code.equals(
+                                                    o.getCodeRegion()))
+                                    .findFirst()
+                                    .orElse(null);
 
                     if (region != null) {
 
@@ -391,7 +396,15 @@ public class QuotaService {
 
                 } else if ("ZONE".equals(type)) {
 
-                    OrganigrammeAgenceResponse zone = structure;
+                    OrganigrammeAgenceResponse zone =
+                            organigrammeAgenceService
+                                    .getOrganigramme()
+                                    .stream()
+                                    .filter(o ->
+                                            code.equals(
+                                                    o.getCodeZone()))
+                                    .findFirst()
+                                    .orElse(null);
 
                     if (zone != null) {
 
@@ -437,7 +450,8 @@ public class QuotaService {
             );
 
             // Quotas Région
-            agences
+            organigrammeAgenceService
+                    .getOrganigramme()
                     .stream()
                     .map(OrganigrammeAgenceResponse::getCodeRegion)
                     .distinct()
@@ -460,7 +474,8 @@ public class QuotaService {
                     });
 
             // Quotas Zone
-            agences
+            organigrammeAgenceService
+                    .getOrganigramme()
                     .stream()
                     .map(OrganigrammeAgenceResponse::getCodeZone)
                     .distinct()
