@@ -57,151 +57,124 @@ public class QuotaService {
         }
     }
 
-    public List<QuotaResponse> listerQuotas(
-            String structure,
-            String dateDebut,
-            String dateFin,
-            String statutQuota)
-            throws TechnicalException {
+   public List<QuotaResponse> listerQuotas(
+        String structure,
+        String dateDebut,
+        String dateFin,
+        String statutQuota) throws TechnicalException {
 
-        try {
+    try {
+        List<QuotaResponse> quotas = quotaRendezvousProxyClient.listerQuotas(
+                structure,
+                dateDebut,
+                dateFin,
+                statutQuota
+        );
 
-            List<QuotaResponse> quotas =
-                    quotaRendezvousProxyClient.listerQuotas(
-                            structure,
-                            dateDebut,
-                            dateFin,
-                            statutQuota);
+        if (quotas.isEmpty()) {
+            return quotas;
+        }
 
-            for (QuotaResponse quota : quotas) {
+        List<OrganigrammeAgenceResponse> organigramme =
+                organigrammeAgenceService.getOrganigramme();
 
-                OrganigrammeAgenceResponse agence =
-                        organigrammeAgenceService
-                                .getOrganigramme()
-                                .stream()
-                                .filter(o ->
-                                        quota.getStructure()
-                                                .equals(o.getCodeAgence()))
-                                .findFirst()
-                                .orElse(null);
+        // Ces recherches sont mémorisées uniquement pour cet appel.
+        Map<String, Optional<OrganigrammeAgenceResponse>> agencesParCode =
+                new HashMap<>();
+        Map<String, Optional<OrganigrammeAgenceResponse>> zonesParCode =
+                new HashMap<>();
+        Map<String, Optional<OrganigrammeAgenceResponse>> regionsParCode =
+                new HashMap<>();
 
-                if (agence != null) {
+        for (QuotaResponse quota : quotas) {
+            String codeStructure = quota.getStructure();
 
-                    quota.setCodeRegion(
-                            agence.getCodeRegion());
+            // 1. Agence
+            Optional<OrganigrammeAgenceResponse> agence =
+                    agencesParCode.computeIfAbsent(
+                            codeStructure,
+                            code -> organigramme.stream()
+                                    .filter(entree -> code.equals(entree.getCodeAgence()))
+                                    .findFirst()
+                    );
 
-                    quota.setLibelleRegion(
-                            agence.getLibelleRegion());
+            if (agence.isPresent()) {
+                OrganigrammeAgenceResponse entree = agence.get();
 
-                    quota.setCodeZone(
-                            agence.getCodeZone());
-
-                    quota.setLibelleZone(
-                            agence.getLibelleZone());
-
-                    quota.setCodeAgence(
-                            agence.getCodeAgence());
-
-                    quota.setLibelleAgence(
-                            agence.getLibelleAgence());
-                }
+                quota.setCodeRegion(entree.getCodeRegion());
+                quota.setLibelleRegion(entree.getLibelleRegion());
+                quota.setCodeZone(entree.getCodeZone());
+                quota.setLibelleZone(entree.getLibelleZone());
+                quota.setCodeAgence(entree.getCodeAgence());
+                quota.setLibelleAgence(entree.getLibelleAgence());
             }
-            for (QuotaResponse quota : quotas) {
 
-                if ("0RA".equals(quota.getStructure())) {
+            // 2. National
+            if ("0RA".equals(codeStructure)) {
+                quota.setCodeRegion("");
+                quota.setLibelleRegion("");
+                quota.setCodeZone("");
+                quota.setLibelleZone("");
+                quota.setCodeAgence("");
+                quota.setLibelleAgence("");
+            }
 
-                    quota.setCodeRegion("");
-                    quota.setLibelleRegion("");
+            // 3. Zone, uniquement si le libellé zone est null
+            if (quota.getLibelleZone() == null) {
+                Optional<OrganigrammeAgenceResponse> zone =
+                        zonesParCode.computeIfAbsent(
+                                codeStructure,
+                                code -> organigramme.stream()
+                                        .filter(entree -> code.equals(entree.getCodeZone()))
+                                        .findFirst()
+                        );
 
-                    quota.setCodeZone("");
-                    quota.setLibelleZone("");
+                if (zone.isPresent()) {
+                    OrganigrammeAgenceResponse entree = zone.get();
 
+                    quota.setCodeRegion(entree.getCodeRegion());
+                    quota.setLibelleRegion(entree.getLibelleRegion());
+                    quota.setCodeZone(entree.getCodeZone());
+                    quota.setLibelleZone(entree.getLibelleZone());
                     quota.setCodeAgence("");
                     quota.setLibelleAgence("");
                 }
             }
 
-            for (QuotaResponse quota : quotas) {
+            // 4. Région, uniquement si le libellé région est null
+            if (quota.getLibelleRegion() == null) {
+                Optional<OrganigrammeAgenceResponse> region =
+                        regionsParCode.computeIfAbsent(
+                                codeStructure,
+                                code -> organigramme.stream()
+                                        .filter(entree -> code.equals(entree.getCodeRegion()))
+                                        .findFirst()
+                        );
 
-                if (quota.getLibelleZone() == null) {
+                if (region.isPresent()) {
+                    OrganigrammeAgenceResponse entree = region.get();
 
-                    OrganigrammeAgenceResponse zone =
-                            organigrammeAgenceService
-                                    .getOrganigramme()
-                                    .stream()
-                                    .filter(o ->
-                                            quota.getStructure()
-                                                    .equals(
-                                                            o.getCodeZone()))
-                                    .findFirst()
-                                    .orElse(null);
-
-                    if (zone != null) {
-
-                        quota.setCodeRegion(
-                                zone.getCodeRegion());
-
-                        quota.setLibelleRegion(
-                                zone.getLibelleRegion());
-
-                        quota.setCodeZone(
-                                zone.getCodeZone());
-
-                        quota.setLibelleZone(
-                                zone.getLibelleZone());
-
-                        quota.setCodeAgence("");
-                        quota.setLibelleAgence("");
-                    }
+                    quota.setCodeRegion(entree.getCodeRegion());
+                    quota.setLibelleRegion(entree.getLibelleRegion());
+                    quota.setCodeZone("");
+                    quota.setLibelleZone("");
+                    quota.setCodeAgence("");
+                    quota.setLibelleAgence("");
                 }
             }
-
-            for (QuotaResponse quota : quotas) {
-
-                if (quota.getLibelleRegion() == null) {
-
-                    OrganigrammeAgenceResponse region =
-                            organigrammeAgenceService
-                                    .getOrganigramme()
-                                    .stream()
-                                    .filter(o ->
-                                            quota.getStructure()
-                                                    .equals(
-                                                            o.getCodeRegion()))
-                                    .findFirst()
-                                    .orElse(null);
-
-                    if (region != null) {
-
-                        quota.setCodeRegion(
-                                region.getCodeRegion());
-
-                        quota.setLibelleRegion(
-                                region.getLibelleRegion());
-
-                        quota.setCodeZone("");
-                        quota.setLibelleZone("");
-
-                        quota.setCodeAgence("");
-                        quota.setLibelleAgence("");
-                    }
-                }
-            }
-
-
-
-
-            return quotas;
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            throw buildTechnicalException(
-                    e,
-                    "Un problème est survenu lors de la récupération des quotas");
         }
+
+        return quotas;
+
+    } catch (Exception e) {
+        e.printStackTrace();
+
+        throw buildTechnicalException(
+                e,
+                "Un problème est survenu lors de la récupération des quotas"
+        );
     }
+}
 
     public QuotaResponse lireQuota(String idQuota) throws TechnicalException {
         try {
